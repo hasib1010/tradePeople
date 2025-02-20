@@ -1,0 +1,430 @@
+// src/components/common/Navbar.js
+"use client"
+import { useState, useEffect } from "react";
+import { useSession, signOut } from "next-auth/react";
+import Link from "next/link";
+import Image from "next/image";
+import { usePathname } from "next/navigation";
+
+export default function Navbar() {
+  const { data: session, status } = useSession();
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
+  const pathname = usePathname();
+  
+  // Close menus when clicking outside
+  useEffect(() => {
+    const handleOutsideClick = () => {
+      setIsMenuOpen(false);
+      setIsProfileMenuOpen(false);
+    };
+    
+    window.addEventListener("click", handleOutsideClick);
+    return () => window.removeEventListener("click", handleOutsideClick);
+  }, []);
+
+  const handleMenuClick = (e) => {
+    e.stopPropagation();
+    setIsMenuOpen(!isMenuOpen);
+    setIsProfileMenuOpen(false);
+  };
+
+  const handleProfileMenuClick = (e) => {
+    e.stopPropagation();
+    setIsProfileMenuOpen(!isProfileMenuOpen);
+    setIsMenuOpen(false);
+  };
+
+  const handleLogout = async () => {
+    await signOut({ redirect: true, callbackUrl: "/" });
+  };
+
+  const isAuthenticated = status === "authenticated";
+  const userRole = session?.user?.role || "";
+
+  // Role-specific navigation items
+  const getNavItems = () => {
+    // Common nav items for all users
+    const commonItems = [
+      {
+        href: "/",
+        label: "Home",
+        isActive: pathname === "/"
+      }
+    ];
+
+    // Items for authenticated users
+    if (isAuthenticated) {
+      switch(userRole) {
+        case "admin":
+          return [
+            ...commonItems,
+            {
+              href: "/dashboard/admin",
+              label: "Dashboard",
+              isActive: pathname.includes("/dashboard")
+            },
+            {
+              href: "/admin/users",
+              label: "Manage Users",
+              isActive: pathname.includes("/admin/users")
+            },
+            {
+              href: "/admin/jobs",
+              label: "Manage Jobs",
+              isActive: pathname.includes("/admin/jobs")
+            },
+            {
+              href: "/admin/verifications",
+              label: "Verifications",
+              isActive: pathname.includes("/admin/verifications")
+            }
+          ];
+        case "tradesperson":
+          return [
+            ...commonItems,
+            {
+              href: "/jobs",
+              label: "Find Jobs",
+              isActive: pathname === "/jobs" || pathname.startsWith("/jobs/")
+            },
+            {
+              href: "/dashboard/tradesperson",
+              label: "Dashboard",
+              isActive: pathname.includes("/dashboard")
+            },
+            {
+              href: "/applications",
+              label: "My Applications",
+              isActive: pathname.includes("/applications")
+            },
+            {
+              href: "/messages",
+              label: "Messages",
+              isActive: pathname === "/messages" || pathname.startsWith("/messages/")
+            }
+          ];
+        case "customer":
+          return [
+            ...commonItems,
+            {
+              href: "/tradespeople",
+              label: "Find Tradespeople",
+              isActive: pathname === "/tradespeople" || pathname.startsWith("/tradespeople/")
+            },
+            {
+              href: "/dashboard/customer",
+              label: "Dashboard",
+              isActive: pathname.includes("/dashboard")
+            },
+            {
+              href: "/jobs/post",
+              label: "Post a Job",
+              isActive: pathname === "/jobs/post"
+            },
+            {
+              href: "/messages",
+              label: "Messages",
+              isActive: pathname === "/messages" || pathname.startsWith("/messages/")
+            }
+          ];
+        default:
+          return commonItems;
+      }
+    } else {
+      // Non-authenticated users
+      return [
+        ...commonItems,
+        {
+          href: "/jobs",
+          label: "Find Jobs",
+          isActive: pathname === "/jobs" || pathname.startsWith("/jobs/")
+        },
+        {
+          href: "/tradespeople",
+          label: "Find Tradespeople",
+          isActive: pathname === "/tradespeople" || pathname.startsWith("/tradespeople/")
+        }
+      ];
+    }
+  };
+
+  // Get profile menu items based on role
+  const getProfileMenuItems = () => {
+    const commonItems = [
+      {
+        href: `/dashboard/${userRole}`,
+        label: "Dashboard"
+      },
+      {
+        href: "/profile",
+        label: "Profile"
+      }
+    ];
+
+    switch(userRole) {
+      case "admin":
+        return [
+          ...commonItems,
+          {
+            href: "/admin/settings",
+            label: "Platform Settings"
+          }
+        ];
+      case "tradesperson":
+        return [
+          ...commonItems,
+          {
+            href: "/credits",
+            label: "Credits"
+          },
+          {
+            href: "/subscriptions",
+            label: "Subscription"
+          },
+          {
+            href: "/portfolio",
+            label: "Portfolio"
+          }
+        ];
+      case "customer":
+        return [
+          ...commonItems,
+          {
+            href: "/my-jobs",
+            label: "My Jobs"
+          },
+          {
+            href: "/favorites",
+            label: "Saved Tradespeople"
+          }
+        ];
+      default:
+        return commonItems;
+    }
+  };
+
+  const navItems = getNavItems();
+  const profileMenuItems = isAuthenticated ? getProfileMenuItems() : [];
+
+  return (
+    <nav className="bg-white shadow-md z-50">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex justify-between h-16">
+          <div className="flex">
+            {/* Logo */}
+            <div className="flex-shrink-0 flex items-center">
+              <Link href="/" className="flex items-center">
+                <span className="text-blue-600 font-bold text-xl">tradePeople</span>
+              </Link>
+            </div>
+            
+            {/* Desktop Navigation */}
+            <div className="hidden sm:ml-6 sm:flex sm:space-x-8">
+              {navItems.map((item, index) => (
+                <Link 
+                  key={index}
+                  href={item.href}
+                  className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium ${
+                    item.isActive
+                      ? "border-blue-500 text-gray-900" 
+                      : "border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700"
+                  }`}
+                >
+                  {item.label}
+                </Link>
+              ))}
+            </div>
+          </div>
+          
+          <div className="flex items-center">
+            {isAuthenticated ? (
+              <div className="ml-3 relative">
+                <div>
+                  <button
+                    onClick={handleProfileMenuClick}
+                    className="max-w-xs bg-white flex items-center text-sm rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                    id="user-menu"
+                    aria-expanded="false"
+                    aria-haspopup="true"
+                  >
+                    <span className="sr-only">Open user menu</span>
+                    {session.user.image ? (
+                      <Image
+                        className="h-8 w-8 rounded-full"
+                        src={session.user.image}
+                        alt={session.user.name || "User profile"}
+                        width={32}
+                        height={32}
+                      />
+                    ) : (
+                      <div className="h-8 w-8 rounded-full bg-blue-500 flex items-center justify-center text-white font-medium">
+                        {session.user.name?.charAt(0) || 'U'}
+                      </div>
+                    )}
+                  </button>
+                </div>
+                
+                {/* Role-based Profile dropdown */}
+                {isProfileMenuOpen && (
+                  <div
+                    className="origin-top-right absolute right-0 mt-2 w-48 rounded-md shadow-lg py-1 bg-white ring-1 ring-black ring-opacity-5 focus:outline-none"
+                    role="menu"
+                    aria-orientation="vertical"
+                    aria-labelledby="user-menu"
+                  >
+                    <div className="px-4 py-2 text-sm text-gray-700 border-b">
+                      <p className="font-medium">{session.user.name}</p>
+                      <p className="text-gray-500 text-xs">{session.user.email}</p>
+                      <p className="text-xs font-medium text-blue-600 mt-1 capitalize">{userRole}</p>
+                    </div>
+                    
+                    {profileMenuItems.map((item, index) => (
+                      <Link
+                        key={index}
+                        href={item.href}
+                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                        role="menuitem"
+                      >
+                        {item.label}
+                      </Link>
+                    ))}
+                    
+                    <button
+                      onClick={handleLogout}
+                      className="block w-full text-left px-4 py-2 text-sm text-red-700 hover:bg-gray-100"
+                      role="menuitem"
+                    >
+                      Sign out
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="hidden sm:flex sm:items-center">
+                <Link
+                  href="/login"
+                  className="text-gray-500 hover:text-gray-700 px-3 py-2 rounded-md text-sm font-medium"
+                >
+                  Sign in
+                </Link>
+                <Link
+                  href="/register"
+                  className="ml-4 px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                >
+                  Sign up
+                </Link>
+              </div>
+            )}
+            
+            {/* Mobile menu button */}
+            <div className="flex items-center sm:hidden">
+              <button
+                onClick={handleMenuClick}
+                className="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500"
+                aria-expanded="false"
+              >
+                <span className="sr-only">Open main menu</span>
+                {!isMenuOpen ? (
+                  <svg
+                    className="block h-6 w-6"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    aria-hidden="true"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                      d="M4 6h16M4 12h16M4 18h16"
+                    />
+                  </svg>
+                ) : (
+                  <svg
+                    className="block h-6 w-6"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    aria-hidden="true"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                      d="M6 18L18 6M6 6l12 12"
+                    />
+                  </svg>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Mobile menu - role specific */}
+      {isMenuOpen && (
+        <div className="sm:hidden">
+          <div className="pt-2 pb-3 space-y-1">
+            {navItems.map((item, index) => (
+              <Link
+                key={index}
+                href={item.href}
+                className={`block pl-3 pr-4 py-2 border-l-4 text-base font-medium ${
+                  item.isActive
+                    ? "border-blue-500 text-blue-700 bg-blue-50"
+                    : "border-transparent text-gray-500 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-700"
+                }`}
+              >
+                {item.label}
+              </Link>
+            ))}
+            
+            {isAuthenticated && (
+              <>
+                {/* Show profile menu items in mobile menu too */}
+                {profileMenuItems.map((item, index) => (
+                  <Link
+                    key={`profile-${index}`}
+                    href={item.href}
+                    className="block pl-3 pr-4 py-2 border-l-4 border-transparent text-base font-medium text-gray-500 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-700"
+                  >
+                    {item.label}
+                  </Link>
+                ))}
+                
+                <button
+                  onClick={handleLogout}
+                  className="block w-full text-left pl-3 pr-4 py-2 border-l-4 border-transparent text-base font-medium text-red-600 hover:bg-gray-50 hover:border-red-300 hover:text-red-700"
+                >
+                  Sign out
+                </button>
+              </>
+            )}
+            
+            {!isAuthenticated && (
+              <div className="pt-4 pb-3 border-t border-gray-200">
+                <div className="space-y-2 px-3">
+                  <Link
+                    href="/login"
+                    className="block px-3 py-2 rounded-md text-base font-medium text-gray-500 hover:text-gray-700 hover:bg-gray-50"
+                  >
+                    Sign in
+                  </Link>
+                  <Link
+                    href="/register"
+                    className="block w-full text-center px-3 py-2 rounded-md text-base font-medium text-white bg-blue-600 hover:bg-blue-700"
+                  >
+                    Sign up
+                  </Link>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </nav>
+  );
+}
