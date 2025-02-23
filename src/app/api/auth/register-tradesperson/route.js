@@ -105,7 +105,7 @@ export async function POST(request) {
       hourlyRate: hourlyRate || 0,
       description,
       location,
-      profileImage: profileImageUrl || "/assets/images/default-profile.png",
+      profileImage: profileImageUrl || "https://i.ibb.co.com/HfL0Fr7P/default-profile.jpg",
       role: "tradesperson",
       certifications: processedCertifications,
       insurance: processedInsurance,

@@ -1,3 +1,4 @@
+// src/lib/db.js
 import mongoose from 'mongoose';
 
 const MONGODB_URI = process.env.MONGODB_URI;
@@ -36,3 +37,7 @@ export async function connectToDatabase() {
 
   return cached.conn;
 }
+
+// For backward compatibility with the existing code
+const connectDb = connectToDatabase;
+export default connectDb;

@@ -5,7 +5,7 @@ import { connectToDatabase } from "@/lib/db";
 import { User } from "@/models/User";
 import bcrypt from "bcryptjs";
 
-const authOptions = {
+export const authOptions = {  // Export authOptions
   providers: [
     CredentialsProvider({
       name: "Credentials",
@@ -48,18 +48,17 @@ const authOptions = {
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
-        // Add user data to token
         token.id = user.id;
         token.email = user.email;
         token.name = user.name;
         token.role = user.role;
         token.picture = user.image;
       }
+      console.log("DEBUG: JWT Token After Callback", token);
       return token;
     },
     async session({ session, token }) {
       if (token) {
-        // Add token data to session
         session.user = {
           id: token.id,
           email: token.email,
@@ -68,26 +67,18 @@ const authOptions = {
           image: token.picture
         };
       }
+      console.log("DEBUG: Session Data", session);
       return session;
-    },
-    async redirect({ url, baseUrl }) {
-      // Always allow redirects to dashboard paths
-      if (url.startsWith(`${baseUrl}/dashboard/`) || 
-          url.startsWith('/dashboard/')) {
-        return url;
-      }
-      
-      // Default to home page
-      return baseUrl;
     }
   },
+  
   pages: {
     signIn: "/login",
     error: "/login"
   },
   session: {
     strategy: "jwt",
-    maxAge: 30 * 24 * 60 * 60 // 30 days
+    maxAge: 30 * 24 * 60 * 60
   },
   secret: process.env.NEXTAUTH_SECRET || "your-fallback-secret-dont-use-this-in-production",
   debug: process.env.NODE_ENV === "development",

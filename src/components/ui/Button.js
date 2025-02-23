@@ -1,36 +1,54 @@
-// src/components/ui/Button.js
-export default function Button({ 
-    children, 
-    variant = 'primary', 
-    size = 'md', 
-    className = '', 
-    ...props 
-  }) {
-    const baseStyles = 'rounded font-medium transition-colors';
-    
-    const variants = {
-      primary: 'bg-blue-600 text-white hover:bg-blue-700',
-      secondary: 'bg-gray-200 text-gray-800 hover:bg-gray-300',
-      success: 'bg-green-600 text-white hover:bg-green-700',
-      danger: 'bg-red-600 text-white hover:bg-red-700',
-      outline: 'bg-transparent border border-blue-600 text-blue-600 hover:bg-blue-50'
-    };
-    
-    const sizes = {
-      sm: 'py-1 px-3 text-sm',
-      md: 'py-2 px-4 text-base',
-      lg: 'py-3 px-6 text-lg'
-    };
-    
-    const variantClass = variants[variant] || variants.primary;
-    const sizeClass = sizes[size] || sizes.md;
-    
-    return (
-      <button
-        className={`${baseStyles} ${variantClass} ${sizeClass} ${className}`}
-        {...props}
-      >
-        {children}
-      </button>
-    );
+"use client"
+
+import React from 'react';
+import { cva } from 'class-variance-authority';
+import { cn } from '@/lib/utils';
+import { Slot } from "@radix-ui/react-slot";
+
+const buttonVariants = cva(
+  "inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
+  {
+    variants: {
+      variant: {
+        default: "bg-slate-900 text-slate-50 hover:bg-slate-900/90",
+        destructive: "bg-red-500 text-slate-50 hover:bg-red-500/90",
+        outline: "border border-slate-200 bg-transparent hover:bg-slate-100 hover:text-slate-900",
+        secondary: "bg-slate-100 text-slate-900 hover:bg-slate-100/80",
+        ghost: "hover:bg-slate-100 hover:text-slate-900",
+        link: "text-slate-900 underline-offset-4 hover:underline",
+        primary: "bg-blue-600 text-white hover:bg-blue-700"
+      },
+      size: {
+        default: "h-10 px-4 py-2",
+        sm: "h-8 rounded-md px-3 text-xs",
+        lg: "h-11 rounded-md px-8",
+        icon: "h-10 w-10",
+      },
+    },
+    defaultVariants: {
+      variant: "default",
+      size: "default",
+    },
   }
+);
+
+const Button = React.forwardRef(({ 
+  className, 
+  variant, 
+  size, 
+  asChild = false,
+  ...props 
+}, ref) => {
+  const Comp = asChild ? Slot : "button";
+  return (
+    <Comp
+      className={cn(buttonVariants({ variant, size, className }))}
+      ref={ref}
+      {...props}
+    />
+  );
+});
+
+Button.displayName = "Button";
+
+export { Button, buttonVariants };

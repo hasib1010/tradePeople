@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 
+// Define the Job Schema
 const jobSchema = new mongoose.Schema({
   title: {
     type: String,
@@ -57,8 +58,11 @@ const jobSchema = new mongoose.Schema({
       default: 'United States',
     },
     coordinates: {
-      type: { type: String, default: 'Point' },
-      coordinates: [Number], // [longitude, latitude]
+      type: { type: String, enum: ['Point'], required: true },
+      coordinates: {
+        type: [Number],  // [longitude, latitude] - Correct order is [longitude, latitude]
+        required: true,
+      },
     },
   },
   customer: {
@@ -148,12 +152,13 @@ const jobSchema = new mongoose.Schema({
 });
 
 // Add indexes for efficient querying
-jobSchema.index({ 'location.coordinates': '2dsphere' });
-jobSchema.index({ category: 1, 'location.city': 1, status: 1 });
-jobSchema.index({ customer: 1 });
-jobSchema.index({ selectedTradesperson: 1 });
-jobSchema.index({ status: 1, timeline: 1 });
+jobSchema.index({ 'location.coordinates': '2dsphere' });  // Geospatial index for location
+jobSchema.index({ category: 1, 'location.city': 1, status: 1 });  // Index for filtering jobs
+jobSchema.index({ customer: 1 });  // Index for customer
+jobSchema.index({ selectedTradesperson: 1 });  // Index for selected tradesperson
+jobSchema.index({ status: 1, timeline: 1 });  // Index for status and timeline
 
+// Create and export Job model
 const Job = mongoose.models.Job || mongoose.model('Job', jobSchema);
 
 export default Job;

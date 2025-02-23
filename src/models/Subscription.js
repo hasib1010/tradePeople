@@ -1,52 +1,71 @@
+// src/models/Subscription.js
+import mongoose from 'mongoose';
 
-// models/Subscription.js
 const subscriptionSchema = new mongoose.Schema({
-    name: {
-      type: String,
-      required: [true, 'Subscription name is required'],
-      unique: true,
-    },
-    description: String,
-    price: {
-      amount: {
-        type: Number,
-        required: [true, 'Price amount is required'],
-        min: [0, 'Price cannot be negative'],
-      },
-      currency: {
-        type: String,
-        default: 'USD',
-      },
-      billingCycle: {
-        type: String,
-        enum: ['monthly', 'quarterly', 'annually'],
-        default: 'monthly',
-      },
-    },
-    benefits: [{
-      type: String,
-    }],
-    creditsIncluded: {
-      type: Number,
-      default: 0,
-    },
-    features: {
-      prioritySupport: Boolean,
-      featuredProfile: Boolean,
-      earlyAccessToJobs: Boolean,
-      discountedExtraCredits: Number, // Percentage discount
-      maxActiveApplications: Number,
-      customBranding: Boolean,
-      applicationBadge: Boolean,
-      maxPortfolioItems: Number,
-    },
-    isActive: {
-      type: Boolean,
-      default: true,
-    },
-    displayOrder: Number,
-    stripePriceId: String,
-  }, {
-    timestamps: true,
-  });
-  
+  name: {
+    type: String,
+    required: [true, 'Subscription name is required'],
+    trim: true,
+  },
+  description: {
+    type: String,
+    trim: true,
+  },
+  planCode: {
+    type: String,
+    trim: true,
+    unique: true,
+    sparse: true  // Allow null/undefined values to avoid unique constraint errors
+  },
+  features: [String],
+  nonFeatures: [String],
+  featured: {
+    type: Boolean,
+    default: false
+  },
+  price: {
+    type: Number,
+    required: [true, 'Subscription price is required'],
+    min: 0,
+  },
+  billingPeriod: {
+    type: String,
+    enum: ['month', 'year'],
+    default: 'month',
+  },
+  creditsPerPeriod: {
+    type: Number,
+    required: [true, 'Credits per period is required'],
+    min: 0,
+  },
+  features: [String],
+  isActive: {
+    type: Boolean,
+    default: true,
+  },
+  stripePriceId: String,
+  stripeProductId: String,
+  createdAt: {
+    type: Date,
+    default: Date.now,
+  },
+  updatedAt: {
+    type: Date,
+    default: Date.now,
+  },
+
+});
+
+// Add index for faster queries
+subscriptionSchema.index({ isActive: 1 });
+subscriptionSchema.index({ price: 1 });
+
+// Auto-update the updatedAt field
+subscriptionSchema.pre('save', function (next) {
+  this.updatedAt = new Date();
+  next();
+});
+
+const Subscription = mongoose.models.Subscription || mongoose.model('Subscription', subscriptionSchema);
+
+export default Subscription;

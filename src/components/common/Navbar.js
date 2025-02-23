@@ -4,13 +4,23 @@ import { useState, useEffect } from "react";
 import { useSession, signOut } from "next-auth/react";
 import Link from "next/link";
 import Image from "next/image";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
+
+// Create a global event for refreshing unread counts
+export const refreshUnreadCount = () => {
+  // Use a custom event to trigger refresh across components
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new Event('refresh-unread-count'));
+  }
+};
 
 export default function Navbar() {
   const { data: session, status } = useSession();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
+  const [unreadMessages, setUnreadMessages] = useState(0);
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   
   // Close menus when clicking outside
   useEffect(() => {
@@ -22,6 +32,41 @@ export default function Navbar() {
     window.addEventListener("click", handleOutsideClick);
     return () => window.removeEventListener("click", handleOutsideClick);
   }, []);
+
+  // Fetch unread message count
+  const fetchUnreadCount = async () => {
+    if (status === 'authenticated') {
+      try {
+        const response = await fetch('/api/messages/unread?t=' + new Date().getTime());
+        if (response.ok) {
+          const data = await response.json();
+          setUnreadMessages(data.count);
+        }
+      } catch (error) {
+        console.error('Error fetching unread messages count:', error);
+      }
+    }
+  };
+
+  // Listen for the global refresh event
+  useEffect(() => {
+    const handleRefresh = () => {
+      fetchUnreadCount();
+    };
+
+    window.addEventListener('refresh-unread-count', handleRefresh);
+    return () => window.removeEventListener('refresh-unread-count', handleRefresh);
+  }, []);
+
+  // Fetch unread counts on load and when pathname changes
+  useEffect(() => {
+    fetchUnreadCount();
+    
+    // Poll for new messages every 30 seconds
+    const intervalId = setInterval(fetchUnreadCount, 30000);
+    
+    return () => clearInterval(intervalId);
+  }, [status, pathname, searchParams]);
 
   const handleMenuClick = (e) => {
     e.stopPropagation();
@@ -101,7 +146,8 @@ export default function Navbar() {
             {
               href: "/messages",
               label: "Messages",
-              isActive: pathname === "/messages" || pathname.startsWith("/messages/")
+              isActive: pathname === "/messages" || pathname.startsWith("/messages/"),
+              badge: unreadMessages > 0 ? unreadMessages : null
             }
           ];
         case "customer":
@@ -125,7 +171,8 @@ export default function Navbar() {
             {
               href: "/messages",
               label: "Messages",
-              isActive: pathname === "/messages" || pathname.startsWith("/messages/")
+              isActive: pathname === "/messages" || pathname.startsWith("/messages/"),
+              badge: unreadMessages > 0 ? unreadMessages : null
             }
           ];
         default:
@@ -159,6 +206,11 @@ export default function Navbar() {
       {
         href: "/profile",
         label: "Profile"
+      },
+      {
+        href: "/messages",
+        label: "Messages",
+        badge: unreadMessages > 0 ? unreadMessages : null
       }
     ];
 
@@ -232,6 +284,11 @@ export default function Navbar() {
                   }`}
                 >
                   {item.label}
+                  {item.badge && (
+                    <span className="ml-1 bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full">
+                      {item.badge > 99 ? '99+' : item.badge}
+                    </span>
+                  )}
                 </Link>
               ))}
             </div>
@@ -249,6 +306,11 @@ export default function Navbar() {
                     aria-haspopup="true"
                   >
                     <span className="sr-only">Open user menu</span>
+                    {unreadMessages > 0 && (
+                      <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs w-5 h-5 flex items-center justify-center rounded-full">
+                        {unreadMessages > 99 ? '99+' : unreadMessages}
+                      </span>
+                    )}
                     {session.user.image ? (
                       <Image
                         className="h-8 w-8 rounded-full"
@@ -283,10 +345,15 @@ export default function Navbar() {
                       <Link
                         key={index}
                         href={item.href}
-                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 relative"
                         role="menuitem"
                       >
                         {item.label}
+                        {item.badge && (
+                          <span className="absolute right-4 bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full">
+                            {item.badge > 99 ? '99+' : item.badge}
+                          </span>
+                        )}
                       </Link>
                     ))}
                     
@@ -372,13 +439,18 @@ export default function Navbar() {
               <Link
                 key={index}
                 href={item.href}
-                className={`block pl-3 pr-4 py-2 border-l-4 text-base font-medium ${
+                className={`flex items-center justify-between pl-3 pr-4 py-2 border-l-4 text-base font-medium ${
                   item.isActive
                     ? "border-blue-500 text-blue-700 bg-blue-50"
                     : "border-transparent text-gray-500 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-700"
                 }`}
               >
-                {item.label}
+                <span>{item.label}</span>
+                {item.badge && (
+                  <span className="bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full">
+                    {item.badge > 99 ? '99+' : item.badge}
+                  </span>
+                )}
               </Link>
             ))}
             
@@ -389,9 +461,14 @@ export default function Navbar() {
                   <Link
                     key={`profile-${index}`}
                     href={item.href}
-                    className="block pl-3 pr-4 py-2 border-l-4 border-transparent text-base font-medium text-gray-500 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-700"
+                    className="flex items-center justify-between pl-3 pr-4 py-2 border-l-4 border-transparent text-base font-medium text-gray-500 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-700"
                   >
-                    {item.label}
+                    <span>{item.label}</span>
+                    {item.badge && (
+                      <span className="bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full">
+                        {item.badge > 99 ? '99+' : item.badge}
+                      </span>
+                    )}
                   </Link>
                 ))}
                 

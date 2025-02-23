@@ -36,7 +36,7 @@ const userSchema = new mongoose.Schema({
     },
     profileImage: {
         type: String,
-        default: '/assets/images/default-profile.png',
+        default: 'https://i.ibb.co.com/HfL0Fr7P/default-profile.jpg',
     },
     location: {
         address: String,
@@ -175,10 +175,12 @@ const tradespersonSchema = new mongoose.Schema({
         available: {
             type: Number,
             default: 0,
+            min: 0
         },
         spent: {
             type: Number,
             default: 0,
+            min: 0
         },
         history: [{
             amount: Number,
@@ -192,7 +194,7 @@ const tradespersonSchema = new mongoose.Schema({
             },
             relatedModel: {
                 type: String,
-                enum: ['Job', 'Transaction', 'Subscription'],
+                enum: ['Job', 'Application', 'Transaction', 'Subscription'],
             },
             date: {
                 type: Date,
@@ -200,6 +202,15 @@ const tradespersonSchema = new mongoose.Schema({
             },
             notes: String,
         }],
+        lastPurchase: {
+            date: Date,
+            packageId: String,
+            amount: Number,
+            transactionId: {
+                type: mongoose.Schema.Types.ObjectId,
+                ref: 'Transaction'
+            }
+        }
     },
     subscription: {
         plan: {
@@ -246,8 +257,82 @@ const tradespersonSchema = new mongoose.Schema({
             default: false,
         }
     }
-    // Removed duplicated location field
 });
+
+// Add credit management methods to tradesperson schema
+tradespersonSchema.methods.addCredits = async function(amount, transactionType, relatedTo, relatedModel, notes) {
+    // Initialize credits if they don't exist
+    if (!this.credits) {
+        this.credits = {
+            available: 0,
+            spent: 0,
+            history: []
+        };
+    }
+    
+    // Add credits to available balance
+    this.credits.available += amount;
+    
+    // Add transaction to history
+    this.credits.history.push({
+        amount,
+        transactionType: transactionType || 'purchase',
+        relatedTo,
+        relatedModel,
+        date: new Date(),
+        notes: notes || `Added ${amount} credits`
+    });
+    
+    // Update last purchase info if this is a purchase
+    if (transactionType === 'purchase' && relatedTo) {
+        this.credits.lastPurchase = {
+            date: new Date(),
+            packageId: notes ? notes.split(' ')[1] : 'unknown',
+            amount: amount,
+            transactionId: relatedTo
+        };
+    }
+    
+    return this.save();
+};
+
+tradespersonSchema.methods.useCredits = async function(amount, relatedTo, relatedModel, notes) {
+    // Check if user has enough credits
+    if (!this.hasEnoughCredits(amount)) {
+        throw new Error('Insufficient credits');
+    }
+    
+    // Deduct credits from available balance
+    this.credits.available -= amount;
+    
+    // Add to spent credits
+    this.credits.spent += amount;
+    
+    // Add transaction to history
+    this.credits.history.push({
+        amount: -amount, // Negative amount for usage
+        transactionType: 'usage',
+        relatedTo,
+        relatedModel,
+        date: new Date(),
+        notes: notes || `Used ${amount} credits`
+    });
+    
+    return this.save();
+};
+
+tradespersonSchema.methods.hasEnoughCredits = function(amount) {
+    return this.credits && this.credits.available >= amount;
+};
+
+tradespersonSchema.methods.getCreditHistory = function(limit = 10) {
+    if (!this.credits || !this.credits.history) return [];
+    
+    // Sort by date descending and limit results
+    return [...this.credits.history]
+        .sort((a, b) => new Date(b.date) - new Date(a.date))
+        .slice(0, limit);
+};
 
 // Check for models to avoid redefining them
 const User = mongoose.models.User || mongoose.model('User', userSchema);

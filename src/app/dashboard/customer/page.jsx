@@ -1,4 +1,3 @@
-// src/app/dashboard/customer/page.js
 "use client"
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
@@ -22,41 +21,70 @@ export default function CustomerDashboard() {
 
   const [recentJobs, setRecentJobs] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    // Fetch customer dashboard data
     if (status === "authenticated" && session?.user) {
-      // This would be a real API call in production
-      // Simulate loading dashboard data
-      setTimeout(() => {
-        setStats({
-          activeJobs: 2,
-          completedJobs: 5,
-          ongoingProjects: 1,
-          savedTradespeople: 3
-        });
-        
-        setRecentJobs([
-          {
-            id: 'job1',
-            title: 'Bathroom Renovation',
-            status: 'in-progress',
-            applications: 4,
-            posted: '2025-02-10',
-            category: 'Plumbing'
-          },
-          {
-            id: 'job2',
-            title: 'Kitchen Cabinet Installation',
-            status: 'open',
-            applications: 2,
-            posted: '2025-02-15',
-            category: 'Carpentry'
+      const fetchJobs = async () => {
+        try {
+          const response = await fetch('/api/jobs');
+          
+          if (!response.ok) {
+            throw new Error('Failed to fetch job data');
           }
-        ]);
-        
-        setLoading(false);
-      }, 1000);
+          
+          const data = await response.json();
+          const userJobs = data.jobs.filter(job => 
+            job.customer && job.customer._id === session.user.id
+          );
+          
+          // Calculate statistics
+          const activeJobsCount = userJobs.filter(job => 
+            job.status === 'open' || job.status === 'draft'
+          ).length;
+          
+          const completedJobsCount = userJobs.filter(job => 
+            job.status === 'completed'
+          ).length;
+          
+          const ongoingProjectsCount = userJobs.filter(job => 
+            job.status === 'in-progress'
+          ).length;
+          
+          setStats({
+            activeJobs: activeJobsCount,
+            completedJobs: completedJobsCount,
+            ongoingProjects: ongoingProjectsCount,
+            savedTradespeople: 3 // This would need its own API endpoint in a real app
+          });
+          
+          // Get the 5 most recent jobs
+          const sortedJobs = [...userJobs].sort((a, b) => 
+            new Date(b.timeline?.postedDate || b.createdAt) - 
+            new Date(a.timeline?.postedDate || a.createdAt)
+          ).slice(0, 5);
+          
+          // Format jobs for display
+          const formattedJobs = sortedJobs.map(job => ({
+            id: job._id,
+            title: job.title,
+            status: job.status,
+            applications: job.applicationCount || job.applications?.length || 0,
+            posted: job.timeline?.postedDate || job.createdAt,
+            category: job.category
+          }));
+          
+          setRecentJobs(formattedJobs);
+          setLoading(false);
+          
+        } catch (error) {
+          console.error("Error fetching job data:", error);
+          setError(error.message);
+          setLoading(false);
+        }
+      };
+      
+      fetchJobs();
     }
   }, [status, session]);
 
@@ -64,6 +92,26 @@ export default function CustomerDashboard() {
     return (
       <div className="min-h-screen flex justify-center items-center bg-gray-50">
         <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex justify-center items-center bg-gray-50">
+        <div className="text-center p-8 max-w-md mx-auto">
+          <svg className="h-16 w-16 text-red-500 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          </svg>
+          <h2 className="mt-4 text-2xl font-bold text-gray-800">Error Loading Dashboard</h2>
+          <p className="mt-2 text-gray-600">{error}</p>
+          <button 
+            onClick={() => window.location.reload()}
+            className="mt-6 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+          >
+            Try Again
+          </button>
+        </div>
       </div>
     );
   }
@@ -105,7 +153,7 @@ export default function CustomerDashboard() {
             </div>
             <div className="bg-gray-50 px-4 py-4 sm:px-6">
               <div className="text-sm">
-                <Link href="/jobs" className="font-medium text-indigo-600 hover:text-indigo-500">
+                <Link href="/jobs?status=open" className="font-medium text-indigo-600 hover:text-indigo-500">
                   View all job postings
                 </Link>
               </div>
@@ -134,7 +182,7 @@ export default function CustomerDashboard() {
             </div>
             <div className="bg-gray-50 px-4 py-4 sm:px-6">
               <div className="text-sm">
-                <Link href="/completed-jobs" className="font-medium text-green-600 hover:text-green-500">
+                <Link href="/jobs?status=completed" className="font-medium text-green-600 hover:text-green-500">
                   View project history
                 </Link>
               </div>
@@ -163,7 +211,7 @@ export default function CustomerDashboard() {
             </div>
             <div className="bg-gray-50 px-4 py-4 sm:px-6">
               <div className="text-sm">
-                <Link href="/ongoing-projects" className="font-medium text-yellow-600 hover:text-yellow-500">
+                <Link href="/jobs?status=in-progress" className="font-medium text-yellow-600 hover:text-yellow-500">
                   Check project status
                 </Link>
               </div>
@@ -217,11 +265,17 @@ export default function CustomerDashboard() {
                           <div className="flex-shrink-0">
                             <span className={`inline-flex items-center justify-center h-12 w-12 rounded-md ${
                               job.status === 'open' ? 'bg-blue-100' : 
-                              job.status === 'in-progress' ? 'bg-yellow-100' : 'bg-green-100'
+                              job.status === 'in-progress' ? 'bg-yellow-100' : 
+                              job.status === 'completed' ? 'bg-green-100' :
+                              job.status === 'draft' ? 'bg-purple-100' :
+                              'bg-gray-100'
                             }`}>
                               <svg className={`h-6 w-6 ${
                                 job.status === 'open' ? 'text-blue-600' : 
-                                job.status === 'in-progress' ? 'text-yellow-600' : 'text-green-600'
+                                job.status === 'in-progress' ? 'text-yellow-600' : 
+                                job.status === 'completed' ? 'text-green-600' :
+                                job.status === 'draft' ? 'text-purple-600' :
+                                'text-gray-600'
                               }`} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                               </svg>
@@ -234,10 +288,20 @@ export default function CustomerDashboard() {
                             <div className="mt-1 flex items-center">
                               <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
                                 job.status === 'open' ? 'bg-blue-100 text-blue-800' : 
-                                job.status === 'in-progress' ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'
+                                job.status === 'in-progress' ? 'bg-yellow-100 text-yellow-800' : 
+                                job.status === 'completed' ? 'bg-green-100 text-green-800' :
+                                job.status === 'draft' ? 'bg-purple-100 text-purple-800' :
+                                job.status === 'canceled' ? 'bg-red-100 text-red-800' :
+                                job.status === 'expired' ? 'bg-gray-100 text-gray-800' :
+                                'bg-gray-100 text-gray-800'
                               }`}>
                                 {job.status === 'open' ? 'Open' : 
-                                 job.status === 'in-progress' ? 'In Progress' : 'Completed'}
+                                 job.status === 'in-progress' ? 'In Progress' : 
+                                 job.status === 'completed' ? 'Completed' :
+                                 job.status === 'draft' ? 'Draft' :
+                                 job.status === 'canceled' ? 'Canceled' :
+                                 job.status === 'expired' ? 'Expired' :
+                                 job.status}
                               </span>
                               <span className="ml-2 text-sm text-gray-500">{job.applications} applications</span>
                               <span className="mx-1 text-gray-500">•</span>
