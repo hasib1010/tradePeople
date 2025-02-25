@@ -88,7 +88,7 @@ export default function ProfileVerificationPage() {
   if (status === "loading" || verificationStatus.isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex justify-center items-center">
-        <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-blue-500"></div>
+        <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-green-500"></div>
       </div>
     );
   }
@@ -153,7 +153,7 @@ export default function ProfileVerificationPage() {
                 <div className="mt-6">
                   <Link
                     href="/jobs"
-                    className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                    className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
                   >
                     Browse Jobs
                   </Link>
@@ -174,7 +174,7 @@ export default function ProfileVerificationPage() {
                     <h4 className="text-md font-medium text-gray-900">Verification Requirements</h4>
                     <ul className="mt-2 space-y-2">
                       <li className="flex items-start">
-                        <span className="h-5 w-5 text-blue-500 mr-2">
+                        <span className="h-5 w-5 text-green-500 mr-2">
                           <FileText className="h-5 w-5" />
                         </span>
                         <span className="text-sm text-gray-600">
@@ -182,7 +182,7 @@ export default function ProfileVerificationPage() {
                         </span>
                       </li>
                       <li className="flex items-start">
-                        <span className="h-5 w-5 text-blue-500 mr-2">
+                        <span className="h-5 w-5 text-green-500 mr-2">
                           <Shield className="h-5 w-5" />
                         </span>
                         <span className="text-sm text-gray-600">
@@ -190,7 +190,7 @@ export default function ProfileVerificationPage() {
                         </span>
                       </li>
                       <li className="flex items-start">
-                        <span className="h-5 w-5 text-blue-500 mr-2">
+                        <span className="h-5 w-5 text-green-500 mr-2">
                           <FileText className="h-5 w-5" />
                         </span>
                         <span className="text-sm text-gray-600">
@@ -202,13 +202,13 @@ export default function ProfileVerificationPage() {
                   <div className="flex flex-col sm:flex-row justify-center gap-3">
                     <Link
                       href="/profile"
-                      className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                      className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
                     >
                       Complete Your Profile
                     </Link>
                     <Link
                       href="/profile/documents"
-                      className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                      className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
                     >
                       <Upload className="mr-1.5 h-4 w-4" />
                       Upload Documents
@@ -222,7 +222,7 @@ export default function ProfileVerificationPage() {
             <div className="text-sm">
               <p className="text-gray-600">
                 Need help with verification? 
-                <Link href="/contact" className="ml-1 font-medium text-blue-600 hover:text-blue-500">
+                <Link href="/contact" className="ml-1 font-medium text-green-600 hover:text-green-500">
                   Contact support
                 </Link>
               </p>

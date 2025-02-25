@@ -1,17 +1,23 @@
 "use client"
-import { useState, useEffect } from "react";
+import { useState, useEffect, useContext } from "react";
 import { useSession } from "next-auth/react";
 import { redirect, useRouter } from "next/navigation";
 import Link from "next/link";
+import { AuthContext } from "@/context/AuthContext";
 
 export default function TradespersonDashboard() {
   const router = useRouter();
+
+console.log(useContext(AuthContext));
+
   const { data: session, status } = useSession({
     required: true,
     onUnauthenticated() {
       redirect("/login?callbackUrl=/dashboard/tradesperson");
     },
   });
+
+
 
   const [dashboardData, setDashboardData] = useState({
     availableJobs: 0,
@@ -379,7 +385,7 @@ export default function TradespersonDashboard() {
                 </ul>
               </div>
             )}
-             
+
           </div>
         </div>
 

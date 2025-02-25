@@ -166,7 +166,7 @@ export default function TradespeopleDirectory() {
     if (loading) {
         return (
             <div className="min-h-screen bg-gray-50 flex justify-center items-center">
-                <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-blue-500"></div>
+                <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-green-500"></div>
             </div>
         );
     }
@@ -201,7 +201,7 @@ export default function TradespeopleDirectory() {
                                     placeholder="Search by name, skill, or business name"
                                     value={filters.search}
                                     onChange={(e) => handleFilterChange('search', e.target.value)}
-                                    className="pl-10 focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
+                                    className="pl-10 focus:ring-green-500 focus:border-green-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
                                 />
                             </div>
                         </div>
@@ -214,7 +214,7 @@ export default function TradespeopleDirectory() {
                                 placeholder="City"
                                 value={filters.city}
                                 onChange={(e) => handleFilterChange('city', e.target.value)}
-                                className="focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
+                                className="focus:ring-green-500 focus:border-green-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
                             />
                         </div>
 
@@ -225,7 +225,7 @@ export default function TradespeopleDirectory() {
                                 placeholder="State"
                                 value={filters.state}
                                 onChange={(e) => handleFilterChange('state', e.target.value)}
-                                className="focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
+                                className="focus:ring-green-500 focus:border-green-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
                             />
                         </div>
 
@@ -234,7 +234,7 @@ export default function TradespeopleDirectory() {
                             <button
                                 type="button"
                                 onClick={() => setShowFilters(!showFilters)}
-                                className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                                className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
                             >
                                 <svg className="-ml-1 mr-2 h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
                                     <path fillRule="evenodd" d="M3 3a1 1 0 011-1h12a1 1 0 011 1v3a1 1 0 01-.293.707L12 11.414V15a1 1 0 01-.293.707l-2 2A1 1 0 018 17v-5.586L3.293 6.707A1 1 0 013 6V3z" clipRule="evenodd" />
@@ -244,7 +244,7 @@ export default function TradespeopleDirectory() {
 
                             <button
                                 type="submit"
-                                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
                             >
                                 Search
                             </button>
@@ -267,7 +267,7 @@ export default function TradespeopleDirectory() {
                                                     type="checkbox"
                                                     checked={filters.skills.includes(skill)}
                                                     onChange={() => handleSkillToggle(skill)}
-                                                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                                                    className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
                                                 />
                                                 <label htmlFor={`skill-${skill}`} className="ml-2 text-sm text-gray-700">
                                                     {skill}
@@ -278,7 +278,7 @@ export default function TradespeopleDirectory() {
                                     {skillOptions.length > 10 && (
                                         <button
                                             type="button"
-                                            className="mt-2 text-sm text-blue-600 hover:text-blue-500"
+                                            className="mt-2 text-sm text-green-600 hover:text-green-500"
                                             // Implement a modal or dropdown for all skills
                                             onClick={() => alert('Show all skills')}
                                         >
@@ -295,7 +295,7 @@ export default function TradespeopleDirectory() {
                                             name="rating"
                                             value={filters.rating}
                                             onChange={(e) => handleFilterChange('rating', e.target.value)}
-                                            className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
+                                            className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-sm rounded-md"
                                         >
                                             <option value="">Any Rating</option>
                                             <option value="4">4+ Stars</option>
@@ -310,7 +310,7 @@ export default function TradespeopleDirectory() {
                                             name="minExperience"
                                             value={filters.minExperience}
                                             onChange={(e) => handleFilterChange('minExperience', e.target.value)}
-                                            className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
+                                            className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-sm rounded-md"
                                         >
                                             <option value="">Any Experience</option>
                                             <option value="1">1+ Years</option>
@@ -331,7 +331,7 @@ export default function TradespeopleDirectory() {
                                             type="checkbox"
                                             checked={filters.availableNow}
                                             onChange={(e) => handleFilterChange('availableNow', e.target.checked)}
-                                            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                                            className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
                                         />
                                         <label htmlFor="availableNow" className="ml-2 text-sm text-gray-700">
                                             Available Now
@@ -341,7 +341,7 @@ export default function TradespeopleDirectory() {
                                     <button
                                         type="button"
                                         onClick={clearFilters}
-                                        className="mt-6 inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                                        className="mt-6 inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
                                     >
                                         Clear All Filters
                                     </button>
@@ -377,7 +377,7 @@ export default function TradespeopleDirectory() {
                         {(filters.search || filters.skills.length > 0 || filters.city || filters.state || filters.rating || filters.availableNow || filters.minExperience) && (
                             <button
                                 onClick={clearFilters}
-                                className="mt-6 inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                                className="mt-6 inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
                             >
                                 Clear All Filters
                             </button>
@@ -437,7 +437,7 @@ export default function TradespeopleDirectory() {
                                         {session?.user?.role === 'customer' && (
                                             <button
                                                 onClick={() => toggleFavorite(person._id)}
-                                                className="ml-2 p-1 rounded-full hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                                                className="ml-2 p-1 rounded-full hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
                                             >
                                                 <svg
                                                     className={`h-6 w-6 ${favorites.includes(person._id) ? 'text-red-500 fill-current' : 'text-gray-400'}`}
@@ -500,7 +500,7 @@ export default function TradespeopleDirectory() {
                                             {person.skills?.slice(0, 5).map((skill) => (
                                                 <span
                                                     key={skill}
-                                                    className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
+                                                    className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800"
                                                 >
                                                     {skill}
                                                 </span>
@@ -526,7 +526,7 @@ export default function TradespeopleDirectory() {
                                         </div>
                                         <Link
                                             href={`/tradespeople/${person._id}`}
-                                            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                                            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
                                         >
                                             View Profile
                                         </Link>
@@ -553,7 +553,7 @@ export default function TradespeopleDirectory() {
                             <a
                                 href="#"
                                 aria-current="page"
-                                className="z-10 bg-blue-50 border-blue-500 text-blue-600 relative inline-flex items-center px-4 py-2 border text-sm font-medium"
+                                className="z-10 bg-green-50 border-green-500 text-green-600 relative inline-flex items-center px-4 py-2 border text-sm font-medium"
                             >
                                 1
                             </a>

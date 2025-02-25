@@ -65,6 +65,10 @@ export default function RegisterPage() {
       setPasswordError("");
     }
   };
+  const isValidUKPostcode = (postcode) => {
+    const ukPostcodeRegex = /^([A-Z]{1,2}\d[A-Z\d]? ?\d[A-Z]{2})$/i;
+    return ukPostcodeRegex.test(postcode.trim());
+  };
 
   const handlePasswordChange = (e) => {
     handleChange(e);
@@ -83,6 +87,16 @@ export default function RegisterPage() {
       setIsLoading(false);
       return;
     }
+
+
+
+    const isValidPost = isValidUKPostcode(formData?.location?.postalCode)
+    if (!isValidPost) {
+      setError("Please provide a valid uk postal code")
+      setIsLoading(false);
+      return;
+    }
+    
 
     try {
       const response = await fetch("/api/auth/register", {
@@ -308,7 +322,7 @@ export default function RegisterPage() {
                 : "top-4 text-gray-500 peer-placeholder-shown:top-3 peer-placeholder-shown:text-sm peer-placeholder-shown:text-gray-400 peer-focus:-top-2 peer-focus:text-sm peer-focus:bg-gray-50 peer-focus:px-1"
                 }`}
             >
-              Postal Code
+              Postal Code [e.g, SW1A 1AA]
             </label>
           </div>
 
@@ -316,7 +330,7 @@ export default function RegisterPage() {
           <div className="relative">
             <Input
               name="password"
-              type={isPassShow ? "text":"password"}
+              type={isPassShow ? "text" : "password"}
               required
               minLength={8}
               value={formData.password}
@@ -333,10 +347,10 @@ export default function RegisterPage() {
               Password
             </label>
             <div
-            onClick={()=>setIsPassShow(!isPassShow)}
-            className="absolute cursor-pointer right-4 top-[8px]">
+              onClick={() => setIsPassShow(!isPassShow)}
+              className="absolute cursor-pointer right-4 top-[8px]">
               {
-                isPassShow ? <IoEye size={25}/>:<IoEyeOff size={25}/>
+                isPassShow ? <IoEye size={25} /> : <IoEyeOff size={25} />
               }
             </div>
           </div>
@@ -355,8 +369,8 @@ export default function RegisterPage() {
             />
             <label
               className={`absolute left-3 transition-all text-lg ${formData.confirmPassword
-                  ? "-top-2 text-xs bg-gray-50 px-1"
-                  : "top-4 text-gray-500 peer-placeholder-shown:top-3 peer-placeholder-shown:text-sm peer-placeholder-shown:text-gray-400 peer-focus:-top-2 peer-focus:text-sm peer-focus:bg-gray-50 peer-focus:px-1"
+                ? "-top-2 text-xs bg-gray-50 px-1"
+                : "top-4 text-gray-500 peer-placeholder-shown:top-3 peer-placeholder-shown:text-sm peer-placeholder-shown:text-gray-400 peer-focus:-top-2 peer-focus:text-sm peer-focus:bg-gray-50 peer-focus:px-1"
                 }`}
             >
               Confirm Password
@@ -382,7 +396,7 @@ export default function RegisterPage() {
             <Link href="/login" className="font-medium text-blue-600 hover:text-blue-500">Sign in</Link>
           </p>
         </form>
-       
+
       </div>
     </div>
   );

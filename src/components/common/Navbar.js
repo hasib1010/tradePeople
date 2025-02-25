@@ -306,7 +306,7 @@ export default function Navbar() {
                 <div>
                   <button
                     onClick={handleProfileMenuClick}
-                    className="max-w-xs bg-white flex items-center text-sm rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                    className="max-w-xs bg-white flex items-center text-sm rounded-full focus:outline-none ring-2 ring-offset-2 ring-green-500"
                     id="user-menu"
                     aria-expanded="false"
                     aria-haspopup="true"
@@ -319,7 +319,7 @@ export default function Navbar() {
                     )}
                     {session.user.image ? (
                       <Image
-                        className="h-8 w-8 rounded-full"
+                        className="h-10 w-10 object-cover  rounded-full"
                         src={session.user.image}
                         alt={session.user.name || "User profile"}
                         width={32}
@@ -490,18 +490,19 @@ export default function Navbar() {
             {!isAuthenticated && (
               <div className="pt-4 pb-3 border-t border-gray-200">
                 <div className="space-y-2 px-3">
-                  <Link
-                    href="/login"
-                    className="block px-3 py-2 rounded-md text-base font-medium text-gray-500 hover:text-gray-700 hover:bg-gray-50"
-                  >
-                    Sign in
-                  </Link>
-                  <Link
-                    href="/register"
-                    className="block w-full text-center px-3 py-2 rounded-md text-base font-medium text-white bg-green-600 hover:bg-green-700"
-                  >
-                    Sign up
-                  </Link>
+                <Link
+                  href="/login"
+                  className="block text-center border border-pink-600 hover:text-pink-600 px-6 py-2 rounded-md transition-all bg-pink-600 hover:bg-transparent text-white"
+                >
+                  Sign in
+                </Link>
+
+                <Link
+                  href="/register"
+                  className="lg:ml-4 block text-center border border-green-600 text-green-600 px-6 py-2 rounded-md transition-all hover:bg-green-600 hover:text-white"
+                >
+                  Sign up
+                </Link>
                 </div>
               </div>
             )}

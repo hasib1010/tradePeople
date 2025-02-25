@@ -139,7 +139,7 @@ export default function JobsPage() {
                   placeholder="Search job titles or descriptions"
                   value={filters.search}
                   onChange={handleFilterChange}
-                  className="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md"
+                  className="w-full py-2 px-4 border block "
                 />
               </div>
             </div>
@@ -154,7 +154,7 @@ export default function JobsPage() {
                   name="category"
                   value={filters.category}
                   onChange={handleFilterChange}
-                  className="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md"
+                  className="shadow-sm py-[10px] px-4 border w-full block"
                 >
                   {categories.map((category) => (
                     <option key={category} value={category === 'All Categories' ? '' : category}>
@@ -177,7 +177,7 @@ export default function JobsPage() {
                   placeholder="Enter city name"
                   value={filters.city}
                   onChange={handleFilterChange}
-                  className="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md"
+                  className="shadow-sm py-2 px-4 block border w-full"
                 />
               </div>
             </div>
@@ -194,8 +194,8 @@ export default function JobsPage() {
             <div className="bg-white shadow overflow-hidden sm:rounded-md">
               <ul className="divide-y divide-gray-200">
                 {jobs.map((job) => (
-                  <li key={job._id}>
-                    <Link href={`/jobs/${job._id}`} className="block hover:bg-gray-50">
+                  <li key={job._id} className="shadow-md">
+                    <Link href={`/jobs/${job._id}`} className="block hover:bg-blue-50">
                       <div className="px-4 py-4 sm:px-6">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center">
@@ -236,10 +236,10 @@ export default function JobsPage() {
                             </p>
                           </div>
                         </div>
-                        <div className="mt-2 sm:flex sm:justify-between">
+                        <div className="mt-2  sm:flex sm:justify-between">
                           <div className="sm:flex">
-                            <p className="flex items-center text-sm text-gray-500">
-                              <span>{job.description?.substring(0, 100)}...</span>
+                            <p className="flex  items-center text-sm text-gray-500">
+                              <span>des: {job.description?.substring(0, 100)}...</span>
                             </p>
                           </div>
                           <div className="mt-2 flex items-center text-sm text-gray-500 sm:mt-0">
@@ -273,7 +273,7 @@ export default function JobsPage() {
                             </span>
                           </div>
                           <div className="text-sm text-gray-500">
-                            {job.applicationCount || 0} applications
+                            <span className="bg-green-600 px-1 rounded-full text-white">{job.applicationCount || 0}</span> applications
                           </div>
                         </div>
                       </div>

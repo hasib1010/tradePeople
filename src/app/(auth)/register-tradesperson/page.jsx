@@ -158,6 +158,11 @@ export default function RegisterTradespersonPage() {
     }
   };
 
+  const isValidUKPostcode = (postcode) => {
+    const ukPostcodeRegex = /^([A-Z]{1,2}\d[A-Z\d]? ?\d[A-Z]{2})$/i;
+    return ukPostcodeRegex.test(postcode.trim());
+  };
+
   const nextStep = () => {
     // Validation for each step
     if (step === 1) {
@@ -186,9 +191,21 @@ export default function RegisterTradespersonPage() {
     }
 
     if (step === 3) {
+
+
+
+
       if (!formData.location.address || !formData.location.city ||
         !formData.location.state || !formData.location.postalCode) {
         setError("Please fill all location fields");
+        return;
+      }
+
+      const isValidPost = isValidUKPostcode(formData?.location?.postalCode)
+      
+      if (!isValidPost) {
+        setError("Please provide a valid uk postal code")
+
         return;
       }
     }
@@ -1012,13 +1029,13 @@ export default function RegisterTradespersonPage() {
             Register as a tradesperson
           </h2>
           <div className=" space-y-2 mt-4 text-center text-sm text-gray-600">
-              <p>Or{" "}</p>
-              <p>
-                <Link href="/register" className="font-medium inline-block text-blue-600 px-10 p-3">
-                  Register as a customer
-                </Link>
-              </p>
-            </div>
+            <p>Or{" "}</p>
+            <p>
+              <Link href="/register" className="font-medium inline-block text-blue-600 px-10 p-3">
+                Register as a customer
+              </Link>
+            </p>
+          </div>
         </div>
 
         <div className="mt-8">
@@ -1147,7 +1164,7 @@ export default function RegisterTradespersonPage() {
 
 
 
-            
+
           </div>
         </div>
       </div>
