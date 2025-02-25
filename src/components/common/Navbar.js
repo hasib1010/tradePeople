@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useSession, signOut } from "next-auth/react";
 import Link from "next/link";
 import Image from "next/image";
+
 import { usePathname, useSearchParams } from "next/navigation";
 
 // Create a global event for refreshing unread counts
@@ -21,14 +22,14 @@ export default function Navbar() {
   const [unreadMessages, setUnreadMessages] = useState(0);
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  
+
   // Close menus when clicking outside
   useEffect(() => {
     const handleOutsideClick = () => {
       setIsMenuOpen(false);
       setIsProfileMenuOpen(false);
     };
-    
+
     window.addEventListener("click", handleOutsideClick);
     return () => window.removeEventListener("click", handleOutsideClick);
   }, []);
@@ -61,10 +62,10 @@ export default function Navbar() {
   // Fetch unread counts on load and when pathname changes
   useEffect(() => {
     fetchUnreadCount();
-    
+
     // Poll for new messages every 30 seconds
     const intervalId = setInterval(fetchUnreadCount, 30000);
-    
+
     return () => clearInterval(intervalId);
   }, [status, pathname, searchParams]);
 
@@ -100,10 +101,10 @@ export default function Navbar() {
 
     // Items for authenticated users
     if (isAuthenticated) {
-      switch(userRole) {
+      switch (userRole) {
         case "admin":
           return [
-            ...commonItems,
+            
             {
               href: "/dashboard/admin",
               label: "Dashboard",
@@ -127,7 +128,7 @@ export default function Navbar() {
           ];
         case "tradesperson":
           return [
-            ...commonItems,
+           
             {
               href: "/jobs",
               label: "Find Jobs",
@@ -152,7 +153,7 @@ export default function Navbar() {
           ];
         case "customer":
           return [
-            ...commonItems,
+           
             {
               href: "/tradespeople",
               label: "Find Tradespeople",
@@ -214,7 +215,7 @@ export default function Navbar() {
       }
     ];
 
-    switch(userRole) {
+    switch (userRole) {
       case "admin":
         return [
           ...commonItems,
@@ -267,21 +268,26 @@ export default function Navbar() {
             {/* Logo */}
             <div className="flex-shrink-0 flex items-center">
               <Link href="/" className="flex items-center">
-                <span className="text-blue-600 font-bold text-xl">tradePeople</span>
+                <Image
+                  src="/new Logo.png"
+                  alt="MyTradePerson"
+                  width={50}
+                  height={50}
+                  className="rounded-lg shadow-lg object-cover "
+                />
               </Link>
             </div>
-            
+
             {/* Desktop Navigation */}
             <div className="hidden sm:ml-6 sm:flex sm:space-x-8">
               {navItems.map((item, index) => (
-                <Link 
+                <Link
                   key={index}
                   href={item.href}
-                  className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium ${
-                    item.isActive
-                      ? "border-blue-500 text-gray-900" 
-                      : "border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700"
-                  }`}
+                  className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium ${item.isActive
+                    ? "border-green-500 text-gray-900"
+                    : "border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700"
+                    }`}
                 >
                   {item.label}
                   {item.badge && (
@@ -293,14 +299,14 @@ export default function Navbar() {
               ))}
             </div>
           </div>
-          
+
           <div className="flex items-center">
             {isAuthenticated ? (
               <div className="ml-3 relative">
                 <div>
                   <button
                     onClick={handleProfileMenuClick}
-                    className="max-w-xs bg-white flex items-center text-sm rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                    className="max-w-xs bg-white flex items-center text-sm rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
                     id="user-menu"
                     aria-expanded="false"
                     aria-haspopup="true"
@@ -320,13 +326,13 @@ export default function Navbar() {
                         height={32}
                       />
                     ) : (
-                      <div className="h-8 w-8 rounded-full bg-blue-500 flex items-center justify-center text-white font-medium">
+                      <div className="h-8 w-8 rounded-full bg-green-500 flex items-center justify-center text-white font-medium">
                         {session.user.name?.charAt(0) || 'U'}
                       </div>
                     )}
                   </button>
                 </div>
-                
+
                 {/* Role-based Profile dropdown */}
                 {isProfileMenuOpen && (
                   <div
@@ -338,9 +344,9 @@ export default function Navbar() {
                     <div className="px-4 py-2 text-sm text-gray-700 border-b">
                       <p className="font-medium">{session.user.name}</p>
                       <p className="text-gray-500 text-xs">{session.user.email}</p>
-                      <p className="text-xs font-medium text-blue-600 mt-1 capitalize">{userRole}</p>
+                      <p className="text-xs font-medium text-green-600 mt-1 capitalize">{userRole}</p>
                     </div>
-                    
+
                     {profileMenuItems.map((item, index) => (
                       <Link
                         key={index}
@@ -356,7 +362,7 @@ export default function Navbar() {
                         )}
                       </Link>
                     ))}
-                    
+
                     <button
                       onClick={handleLogout}
                       className="block w-full text-left px-4 py-2 text-sm text-red-700 hover:bg-gray-100"
@@ -371,24 +377,25 @@ export default function Navbar() {
               <div className="hidden sm:flex sm:items-center">
                 <Link
                   href="/login"
-                  className="text-gray-500 hover:text-gray-700 px-3 py-2 rounded-md text-sm font-medium"
+                  className="block text-center border border-pink-600 hover:text-pink-600 px-6 py-2 rounded-md transition-all bg-pink-600 hover:bg-transparent text-white"
                 >
                   Sign in
                 </Link>
+
                 <Link
                   href="/register"
-                  className="ml-4 px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                  className="ml-4 block text-center border border-green-600 text-green-600 px-6 py-2 rounded-md transition-all hover:bg-green-600 hover:text-white"
                 >
                   Sign up
                 </Link>
               </div>
             )}
-            
+
             {/* Mobile menu button */}
             <div className="flex items-center sm:hidden">
               <button
                 onClick={handleMenuClick}
-                className="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500"
+                className="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-green-500"
                 aria-expanded="false"
               >
                 <span className="sr-only">Open main menu</span>
@@ -439,11 +446,10 @@ export default function Navbar() {
               <Link
                 key={index}
                 href={item.href}
-                className={`flex items-center justify-between pl-3 pr-4 py-2 border-l-4 text-base font-medium ${
-                  item.isActive
-                    ? "border-blue-500 text-blue-700 bg-blue-50"
-                    : "border-transparent text-gray-500 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-700"
-                }`}
+                className={`flex items-center justify-between pl-3 pr-4 py-2 border-l-4 text-base font-medium ${item.isActive
+                  ? "border-green-500 text-green-700 bg-green-50"
+                  : "border-transparent text-gray-500 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-700"
+                  }`}
               >
                 <span>{item.label}</span>
                 {item.badge && (
@@ -453,7 +459,7 @@ export default function Navbar() {
                 )}
               </Link>
             ))}
-            
+
             {isAuthenticated && (
               <>
                 {/* Show profile menu items in mobile menu too */}
@@ -471,7 +477,7 @@ export default function Navbar() {
                     )}
                   </Link>
                 ))}
-                
+
                 <button
                   onClick={handleLogout}
                   className="block w-full text-left pl-3 pr-4 py-2 border-l-4 border-transparent text-base font-medium text-red-600 hover:bg-gray-50 hover:border-red-300 hover:text-red-700"
@@ -480,7 +486,7 @@ export default function Navbar() {
                 </button>
               </>
             )}
-            
+
             {!isAuthenticated && (
               <div className="pt-4 pb-3 border-t border-gray-200">
                 <div className="space-y-2 px-3">
@@ -492,7 +498,7 @@ export default function Navbar() {
                   </Link>
                   <Link
                     href="/register"
-                    className="block w-full text-center px-3 py-2 rounded-md text-base font-medium text-white bg-blue-600 hover:bg-blue-700"
+                    className="block w-full text-center px-3 py-2 rounded-md text-base font-medium text-white bg-green-600 hover:bg-green-700"
                   >
                     Sign up
                   </Link>

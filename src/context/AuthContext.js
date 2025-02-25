@@ -4,7 +4,7 @@ import { createContext, useContext, useState, useEffect } from 'react';
 import { useSession, signIn, signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 
-const AuthContext = createContext();
+export const AuthContext = createContext();
 
 export function AuthProvider({ children }) {
   const { data: session, status, update } = useSession();
