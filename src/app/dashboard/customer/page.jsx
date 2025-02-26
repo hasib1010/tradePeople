@@ -127,6 +127,7 @@ export default function CustomerDashboard() {
           <p className="mt-2 text-sm text-gray-600">
             Manage your projects and find qualified tradespeople for your home improvement needs.
           </p>
+          <hr className="border-1 mt-2 w-2/12 border-gray-400"/>
         </div>
 
         {/* Stats Grid */}
@@ -303,7 +304,7 @@ export default function CustomerDashboard() {
                                  job.status === 'expired' ? 'Expired' :
                                  job.status}
                               </span>
-                              <span className="ml-2 text-sm text-gray-500">{job.applications} applications</span>
+                              <span className="ml-2 text-sm text-gray-500"><span className="px-1 bg-green-600 text-white rounded-full">{job.applications}</span> applications</span>
                               <span className="mx-1 text-gray-500">•</span>
                               <span className="text-sm text-gray-500">{job.category}</span>
                             </div>

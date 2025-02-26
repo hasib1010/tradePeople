@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { Input } from "@/components/ui/Input";
+import { toast } from "react-toastify";
 
 export default function PostJobPage() {
   const { data: session, status } = useSession({
@@ -13,7 +14,7 @@ export default function PostJobPage() {
       router.push("/login?callbackUrl=/jobs/post");
     },
   });
-  
+
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
@@ -56,19 +57,11 @@ export default function PostJobPage() {
     'Other'
   ];
 
-  const skillOptions = [
-    'Plumbing', 'Electrical', 'Carpentry', 'Painting',
-    'Roofing', 'HVAC', 'Landscaping', 'Masonry',
-    'Flooring', 'Tiling', 'Drywall Installation', 'Cabinetry',
-    'Fencing', 'Decking', 'Concrete Work', 'Window Installation',
-    'Door Installation', 'Appliance Repair', 'Handyman',
-    'House Cleaning', 'Moving', 'Demolition', 'Home Renovation',
-    'Power Washing', 'Gutter Cleaning', 'Furniture Assembly'
-  ];
+
 
   const handleChange = (e) => {
     const { name, value, type, checked, files } = e.target;
-    
+
     if (type === 'checkbox') {
       setFormData({
         ...formData,
@@ -76,7 +69,7 @@ export default function PostJobPage() {
       });
       return;
     }
-    
+
     if (type === 'file') {
       // Handle file attachments
       const fileList = Array.from(files);
@@ -91,7 +84,7 @@ export default function PostJobPage() {
       });
       return;
     }
-    
+
     if (name === 'requiredSkills') {
       // Handle multi-select for skills
       const selectedOptions = Array.from(e.target.selectedOptions, option => option.value);
@@ -101,7 +94,7 @@ export default function PostJobPage() {
       });
       return;
     }
-    
+
     setFormData({
       ...formData,
       [name]: value
@@ -112,7 +105,7 @@ export default function PostJobPage() {
     e.preventDefault();
     setIsSubmitting(true);
     setError("");
-    
+
     try {
       // Prepare form data
       const jobData = {
@@ -136,7 +129,7 @@ export default function PostJobPage() {
         durationUnit: formData.durationUnit,
         isUrgent: formData.isUrgent
       };
-      
+
       // Submit job
       const response = await fetch('/api/jobs', {
         method: 'POST',
@@ -145,37 +138,38 @@ export default function PostJobPage() {
         },
         body: JSON.stringify(jobData)
       });
-      
+
       const data = await response.json();
-      
+
       if (!response.ok) {
         throw new Error(data.error || 'Failed to post job');
       }
-      
+
       // Handle file uploads if there are attachments
       if (formData.attachments.length > 0) {
         const jobId = data.job._id;
         const uploadData = new FormData();
-        
+
         formData.attachments.forEach(attachment => {
           uploadData.append('files', attachment.file);
         });
         uploadData.append('jobId', jobId);
-        
+
         const uploadResponse = await fetch('/api/upload/job-attachments', {
           method: 'POST',
           body: uploadData
         });
-        
+
         if (!uploadResponse.ok) {
           // Not critical, we can still proceed
           console.warn('Failed to upload attachments');
         }
       }
-      
+
       // Redirect to job details page
+      toast.success("Job posted successfully, redirecting....")
       router.push(`/jobs/${data.job._id}?status=created`);
-      
+
     } catch (err) {
       setError(err.message || 'An error occurred while posting the job');
       console.error(err);
@@ -233,7 +227,7 @@ export default function PostJobPage() {
 
         <form onSubmit={handleSubmit} className="space-y-8">
           {/* Job Details Section */}
-          <div className="bg-white shadow overflow-hidden sm:rounded-md">
+          <div className="  overflow-hidden sm:rounded-md">
             <div className="px-4 py-5 sm:px-6">
               <h3 className="text-lg leading-6 font-medium text-gray-900">
                 Job Details
@@ -242,10 +236,10 @@ export default function PostJobPage() {
                 Provide basic information about your project
               </p>
             </div>
-            <div className="border-t border-gray-200 px-4 py-5 sm:p-6">
-              <div className="grid grid-cols-6 gap-6">
-                <div className="col-span-6">
-                  <label htmlFor="title" className="block text-sm font-medium text-gray-700">
+            <div className=" ">
+              <div className="grid grid-cols-6 gap-6   rounded-lg">
+                <div className="col-span-6 bg-white p-5 border shadow-md rounded-md">
+                  <label htmlFor="title" className="block text-sm font-semibold text-gray-800">
                     Job Title*
                   </label>
                   <Input
@@ -255,13 +249,13 @@ export default function PostJobPage() {
                     required
                     value={formData.title}
                     onChange={handleChange}
-                    className="mt-1 focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
+                    className="mt-2 focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-lg p-2"
                     placeholder="e.g., Bathroom Renovation, Electrical Rewiring"
                   />
                 </div>
 
-                <div className="col-span-6">
-                  <label htmlFor="description" className="block text-sm font-medium text-gray-700">
+                <div className="col-span-6 bg-white p-5 border shadow-md rounded-md">
+                  <label htmlFor="description" className="block text-sm font-semibold text-gray-800">
                     Job Description*
                   </label>
                   <textarea
@@ -271,13 +265,13 @@ export default function PostJobPage() {
                     required
                     value={formData.description}
                     onChange={handleChange}
-                    className="mt-1 focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
+                    className="mt-2 focus:ring-blue-500 border focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-lg p-2"
                     placeholder="Describe your project in detail. Include specific requirements, materials, timeline expectations, etc."
                   />
                 </div>
 
-                <div className="col-span-6 sm:col-span-3">
-                  <label htmlFor="category" className="block text-sm font-medium text-gray-700">
+                <div className="col-span-6 bg-white p-5 border shadow-md rounded-md">
+                  <label htmlFor="category" className="block text-sm font-semibold text-gray-800">
                     Category*
                   </label>
                   <select
@@ -286,7 +280,7 @@ export default function PostJobPage() {
                     required
                     value={formData.category}
                     onChange={handleChange}
-                    className="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                    className="mt-2 block w-full py-3 px-3 border border-gray-300 bg-white rounded-lg shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                   >
                     <option value="">Select a category</option>
                     {categories.map((category) => (
@@ -297,34 +291,10 @@ export default function PostJobPage() {
                   </select>
                 </div>
 
-                <div className="col-span-6 sm:col-span-3">
-                  <label htmlFor="requiredSkills" className="block text-sm font-medium text-gray-700">
-                    Required Skills
-                  </label>
-                  <select
-                    id="requiredSkills"
-                    name="requiredSkills"
-                    multiple
-                    value={formData.requiredSkills}
-                    onChange={handleChange}
-                    className="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                    size={4}
-                  >
-                    {skillOptions.map((skill) => (
-                      <option key={skill} value={skill}>
-                        {skill}
-                      </option>
-                    ))}
-                  </select>
-                  <p className="mt-2 text-xs text-gray-500">
-                    Hold Ctrl/Cmd to select multiple skills
-                  </p>
-                </div>
-
-                <div className="col-span-6 sm:col-span-3">
+                <div className="col-span-6 bg-white p-5 border shadow-md rounded-md">
                   <fieldset>
-                    <legend className="block text-sm font-medium text-gray-700">Budget</legend>
-                    <div className="mt-4 space-y-4">
+                    <legend className="block text-sm font-semibold text-gray-800">Budget</legend>
+                    <div className="mt-4 space-y-3">
                       <div className="flex items-center">
                         <Input
                           id="budget-negotiable"
@@ -335,7 +305,7 @@ export default function PostJobPage() {
                           onChange={handleChange}
                           className="focus:ring-blue-500 h-4 w-4 text-blue-600 border-gray-300"
                         />
-                        <label htmlFor="budget-negotiable" className="ml-3 block text-sm font-medium text-gray-700">
+                        <label htmlFor="budget-negotiable" className="ml-3 block text-sm font-medium text-gray-800">
                           Negotiable
                         </label>
                       </div>
@@ -349,7 +319,7 @@ export default function PostJobPage() {
                           onChange={handleChange}
                           className="focus:ring-blue-500 h-4 w-4 text-blue-600 border-gray-300"
                         />
-                        <label htmlFor="budget-fixed" className="ml-3 block text-sm font-medium text-gray-700">
+                        <label htmlFor="budget-fixed" className="ml-3 block text-sm font-medium text-gray-800">
                           Fixed Price
                         </label>
                       </div>
@@ -363,7 +333,7 @@ export default function PostJobPage() {
                           onChange={handleChange}
                           className="focus:ring-blue-500 h-4 w-4 text-blue-600 border-gray-300"
                         />
-                        <label htmlFor="budget-range" className="ml-3 block text-sm font-medium text-gray-700">
+                        <label htmlFor="budget-range" className="ml-3 block text-sm font-medium text-gray-800">
                           Budget Range
                         </label>
                       </div>
@@ -371,13 +341,13 @@ export default function PostJobPage() {
                   </fieldset>
                 </div>
 
-                <div className="col-span-6 sm:col-span-3">
+                <div className={`${formData.budgetType !== "negotiable" && 'p-6'} col-span-6  bg-white  border shadow-md rounded-md`}>
                   {formData.budgetType === 'fixed' && (
                     <div>
-                      <label htmlFor="minBudget" className="block text-sm font-medium text-gray-700">
+                      <label htmlFor="minBudget" className="block text-sm font-semibold text-gray-800">
                         Budget Amount ({formData.currency})
                       </label>
-                      <div className="mt-1 relative rounded-md shadow-sm">
+                      <div className="mt-2 relative rounded-lg shadow-sm">
                         <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                           <span className="text-gray-500 sm:text-sm">$</span>
                         </div>
@@ -389,7 +359,7 @@ export default function PostJobPage() {
                           min="1"
                           value={formData.minBudget}
                           onChange={handleChange}
-                          className="focus:ring-blue-500 focus:border-blue-500 block w-full pl-7 pr-12 sm:text-sm border-gray-300 rounded-md"
+                          className="focus:ring-blue-500 focus:border-blue-500 block w-full pl-7 pr-12 sm:text-sm border-gray-300 rounded-lg p-2"
                           placeholder="0.00"
                         />
                       </div>
@@ -399,10 +369,10 @@ export default function PostJobPage() {
                   {formData.budgetType === 'range' && (
                     <div className="space-y-4">
                       <div>
-                        <label htmlFor="minBudget" className="block text-sm font-medium text-gray-700">
+                        <label htmlFor="minBudget" className="block text-sm font-semibold text-gray-800">
                           Minimum Budget ({formData.currency})
                         </label>
-                        <div className="mt-1 relative rounded-md shadow-sm">
+                        <div className="mt-2 relative rounded-lg shadow-sm">
                           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                             <span className="text-gray-500 sm:text-sm">$</span>
                           </div>
@@ -414,29 +384,7 @@ export default function PostJobPage() {
                             min="1"
                             value={formData.minBudget}
                             onChange={handleChange}
-                            className="focus:ring-blue-500 focus:border-blue-500 block w-full pl-7 pr-12 sm:text-sm border-gray-300 rounded-md"
-                            placeholder="0.00"
-                          />
-                        </div>
-                      </div>
-                      
-                      <div>
-                        <label htmlFor="maxBudget" className="block text-sm font-medium text-gray-700">
-                          Maximum Budget ({formData.currency})
-                        </label>
-                        <div className="mt-1 relative rounded-md shadow-sm">
-                          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <span className="text-gray-500 sm:text-sm">$</span>
-                          </div>
-                          <Input
-                            type="number"
-                            name="maxBudget"
-                            id="maxBudget"
-                            required
-                            min={formData.minBudget || 1}
-                            value={formData.maxBudget}
-                            onChange={handleChange}
-                            className="focus:ring-blue-500 focus:border-blue-500 block w-full pl-7 pr-12 sm:text-sm border-gray-300 rounded-md"
+                            className="focus:ring-blue-500 focus:border-blue-500 block w-full pl-7 pr-12 sm:text-sm border-gray-300 rounded-lg p-2"
                             placeholder="0.00"
                           />
                         </div>
@@ -445,8 +393,11 @@ export default function PostJobPage() {
                   )}
                 </div>
 
-                <div className="col-span-6">
-                  <div className="flex items-start">
+
+
+
+                <div className="col-span-6 bg-white p-5 border shadow-md rounded-md">
+                  <div className="flex justify-center items-start">
                     <div className="flex items-center h-5">
                       <Input
                         id="isUrgent"
@@ -472,18 +423,16 @@ export default function PostJobPage() {
           </div>
 
           {/* Location Section */}
-          <div className="bg-white shadow overflow-hidden sm:rounded-md">
-            <div className="px-4 py-5 sm:px-6">
-              <h3 className="text-lg leading-6 font-medium text-gray-900">
-                Job Location
-              </h3>
-              <p className="mt-1 text-sm text-gray-500">
-                Where will this project take place?
-              </p>
+          <div className="bg-white shadow-md rounded-lg overflow-hidden">
+            <div className="px-6 py-4 border-b">
+              <h3 className="text-xl font-semibold text-gray-900">Job Location</h3>
+              <p className="text-sm text-gray-500">Where will this project take place?</p>
             </div>
-            <div className="border-t border-gray-200 px-4 py-5 sm:p-6">
-              <div className="grid grid-cols-6 gap-6">
-                <div className="col-span-6">
+            <div className="px-6 py-5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+
+                {/* Street Address */}
+                <div className="col-span-1 sm:col-span-2">
                   <label htmlFor="address" className="block text-sm font-medium text-gray-700">
                     Street Address*
                   </label>
@@ -492,13 +441,15 @@ export default function PostJobPage() {
                     name="address"
                     id="address"
                     required
+                    placeholder="221B Baker Street"
                     value={formData.address}
                     onChange={handleChange}
-                    className="mt-1 focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
+                    className="mt-2 focus:ring-blue-600 focus:border-blue-600 w-full shadow-sm border-gray-300 rounded-md p-2"
                   />
                 </div>
 
-                <div className="col-span-6 sm:col-span-3 lg:col-span-2">
+                {/* City */}
+                <div>
                   <label htmlFor="city" className="block text-sm font-medium text-gray-700">
                     City*
                   </label>
@@ -507,47 +458,54 @@ export default function PostJobPage() {
                     name="city"
                     id="city"
                     required
+                    placeholder="London"
                     value={formData.city}
                     onChange={handleChange}
-                    className="mt-1 focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
+                    className="mt-2 focus:ring-blue-600 focus:border-blue-600 w-full shadow-sm border-gray-300 rounded-md p-2"
                   />
                 </div>
 
-                <div className="col-span-6 sm:col-span-3 lg:col-span-2">
+                {/* State/Province */}
+                <div>
                   <label htmlFor="state" className="block text-sm font-medium text-gray-700">
-                    State/Province*
+                    County/Region*
                   </label>
                   <Input
                     type="text"
                     name="state"
                     id="state"
                     required
+                    placeholder="Greater London"
                     value={formData.state}
                     onChange={handleChange}
-                    className="mt-1 focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
+                    className="mt-2 focus:ring-blue-600 focus:border-blue-600 w-full shadow-sm border-gray-300 rounded-md p-2"
                   />
                 </div>
 
-                <div className="col-span-6 sm:col-span-3 lg:col-span-2">
+                {/* ZIP / Postal Code */}
+                <div>
                   <label htmlFor="postalCode" className="block text-sm font-medium text-gray-700">
-                    ZIP / Postal Code*
+                    Postcode*
                   </label>
                   <Input
                     type="text"
                     name="postalCode"
                     id="postalCode"
                     required
+                    placeholder="EC1A 1BB"
                     value={formData.postalCode}
                     onChange={handleChange}
-                    className="mt-1 focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
+                    className="mt-2 focus:ring-blue-600 focus:border-blue-600 w-full shadow-sm border-gray-300 rounded-md p-2"
                   />
                 </div>
+
               </div>
             </div>
           </div>
 
+
           {/* Timeline Section */}
-          <div className="bg-white shadow overflow-hidden sm:rounded-md">
+          <div className="bg-white shadow-md overflow-hidden sm:rounded-md">
             <div className="px-4 py-5 sm:px-6">
               <h3 className="text-lg leading-6 font-medium text-gray-900">
                 Project Timeline
@@ -670,7 +628,7 @@ export default function PostJobPage() {
                   </p>
                 </div>
               </div>
-              
+
               {formData.attachments.length > 0 && (
                 <div className="mt-4">
                   <h4 className="text-sm font-medium text-gray-700">Selected files:</h4>
@@ -714,7 +672,15 @@ export default function PostJobPage() {
             </button>
           </div>
         </form>
+
+
       </div>
+
+      {
+        isSubmitting ? <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center">
+          <span className="text-white text-xl font-semibold">Posting...</span>
+        </div> : null
+      }
     </div>
   );
 }

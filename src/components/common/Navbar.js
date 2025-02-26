@@ -6,6 +6,7 @@ import Link from "next/link";
 import Image from "next/image";
 
 import { usePathname, useSearchParams } from "next/navigation";
+import { toast } from "react-toastify";
 
 // Create a global event for refreshing unread counts
 export const refreshUnreadCount = () => {
@@ -82,7 +83,11 @@ export default function Navbar() {
   };
 
   const handleLogout = async () => {
-    await signOut({ redirect: true, callbackUrl: "/" });
+    toast.success("Signed Out", {
+      onClose: () => {
+        signOut({ redirect: true, callbackUrl: "/" }); // Redirect after toast disappears
+      },
+    });
   };
 
   const isAuthenticated = status === "authenticated";
@@ -104,7 +109,7 @@ export default function Navbar() {
       switch (userRole) {
         case "admin":
           return [
-            
+
             {
               href: "/dashboard/admin",
               label: "Dashboard",
@@ -128,7 +133,7 @@ export default function Navbar() {
           ];
         case "tradesperson":
           return [
-           
+
             {
               href: "/jobs",
               label: "Find Jobs",
@@ -153,7 +158,7 @@ export default function Navbar() {
           ];
         case "customer":
           return [
-           
+
             {
               href: "/tradespeople",
               label: "Find Tradespeople",
@@ -490,19 +495,19 @@ export default function Navbar() {
             {!isAuthenticated && (
               <div className="pt-4 pb-3 border-t border-gray-200">
                 <div className="space-y-2 px-3">
-                <Link
-                  href="/login"
-                  className="block text-center border border-pink-600 hover:text-pink-600 px-6 py-2 rounded-md transition-all bg-pink-600 hover:bg-transparent text-white"
-                >
-                  Sign in
-                </Link>
+                  <Link
+                    href="/login"
+                    className="block text-center border border-pink-600 hover:text-pink-600 px-6 py-2 rounded-md transition-all bg-pink-600 hover:bg-transparent text-white"
+                  >
+                    Sign in
+                  </Link>
 
-                <Link
-                  href="/register"
-                  className="lg:ml-4 block text-center border border-green-600 text-green-600 px-6 py-2 rounded-md transition-all hover:bg-green-600 hover:text-white"
-                >
-                  Sign up
-                </Link>
+                  <Link
+                    href="/register"
+                    className="lg:ml-4 block text-center border border-green-600 text-green-600 px-6 py-2 rounded-md transition-all hover:bg-green-600 hover:text-white"
+                  >
+                    Sign up
+                  </Link>
                 </div>
               </div>
             )}

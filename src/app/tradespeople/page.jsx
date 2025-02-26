@@ -387,143 +387,150 @@ export default function TradespeopleDirectory() {
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         {tradespeople.map((person) => (
                             <div key={person._id} className="bg-white overflow-hidden shadow rounded-lg">
-                                <div className="p-6">
-                                    <div className="flex items-center">
-                                        <div className="flex-shrink-0 h-16 w-16">
-                                            <img
-                                                className="h-16 w-16 rounded-full object-cover"
-                                                src={person.profileImage || 'https://i.ibb.co.com/HfL0Fr7P/default-profile.jpg'}
-                                                alt={`${person.firstName} ${person.lastName}`}
-                                            />
+
+                                <div className=' p-6 h-full flex flex-col justify-between items-center'>
+                                    <div className="">
+                                        <div className="flex items-center">
+                                            <div className="flex-shrink-0 h-16 w-16">
+                                                <img
+                                                    className="h-16 w-16 rounded-full object-cover"
+                                                    src={person.profileImage || 'https://i.ibb.co.com/HfL0Fr7P/default-profile.jpg'}
+                                                    alt={`${person.firstName} ${person.lastName}`}
+                                                />
+                                            </div>
+                                            <div className="ml-4 flex-1">
+                                                <h3 className="text-lg font-medium text-gray-900">
+                                                    {person.firstName} {person.lastName}
+                                                    {person.isVerified && (
+                                                        <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
+                                                            <svg className="mr-1 h-3 w-3 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                                                                <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                                                            </svg>
+                                                            Verified
+                                                        </span>
+                                                    )}
+                                                </h3>
+                                                {person.businessName && (
+                                                    <p className="text-sm text-gray-500">{person.businessName}</p>
+                                                )}
+                                                <div className="mt-1 flex items-center">
+                                                    <div className="flex items-center">
+                                                        {[0, 1, 2, 3, 4].map((rating) => (
+                                                            <svg
+                                                                key={rating}
+                                                                className={`h-4 w-4 ${rating < Math.floor(person.averageRating)
+                                                                    ? 'text-yellow-400'
+                                                                    : rating < person.averageRating
+                                                                        ? 'text-yellow-300'
+                                                                        : 'text-gray-300'
+                                                                    }`}
+                                                                fill="currentColor"
+                                                                viewBox="0 0 20 20"
+                                                            >
+                                                                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                                                            </svg>
+                                                        ))}
+                                                    </div>
+                                                    <span className="ml-1 text-sm text-gray-500">
+                                                        {person.averageRating.toFixed(1)} ({person.totalReviews} reviews)
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            {session?.user?.role === 'customer' && (
+                                                <button
+                                                    onClick={() => toggleFavorite(person._id)}
+                                                    className="ml-2 p-1 rounded-full hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                                                >
+                                                    <svg
+                                                        className={`h-6 w-6 ${favorites.includes(person._id) ? 'text-red-500 fill-current' : 'text-gray-400'}`}
+                                                        xmlns="http://www.w3.org/2000/svg"
+                                                        viewBox="0 0 24 24"
+                                                        stroke="currentColor"
+                                                        fill="none"
+                                                    >
+                                                        <path
+                                                            strokeLinecap="round"
+                                                            strokeLinejoin="round"
+                                                            strokeWidth={favorites.includes(person._id) ? 0 : 2}
+                                                            d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
+                                                        />
+                                                    </svg>
+                                                </button>
+                                            )}
                                         </div>
-                                        <div className="ml-4 flex-1">
-                                            <h3 className="text-lg font-medium text-gray-900">
-                                                {person.firstName} {person.lastName}
-                                                {person.isVerified && (
-                                                    <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
-                                                        <svg className="mr-1 h-3 w-3 text-green-500" fill="currentColor" viewBox="0 0 20 20">
-                                                            <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                                                        </svg>
-                                                        Verified
+
+                                        <div className="mt-4">
+                                            <div className="text-sm text-gray-900 mb-2">
+                                                <svg className="inline-block h-4 w-4 text-gray-400 mr-1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                                    <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
+                                                </svg>
+                                                {person.location?.city}, {person.location?.state}
+                                            </div>
+
+                                            {person.yearsOfExperience && (
+                                                <div className="text-sm text-gray-900 mb-2">
+                                                    <svg className="inline-block h-4 w-4 text-gray-400 mr-1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                                        <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd" />
+                                                    </svg>
+                                                    {person.yearsOfExperience} years of experience
+                                                </div>
+                                            )}
+
+                                            {person.hourlyRate && (
+                                                <div className="text-sm text-gray-900 mb-2">
+                                                    <svg className="inline-block h-4 w-4 text-gray-400 mr-1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                                        <path d="M8.433 7.418c.155-.103.346-.196.567-.267v1.698a2.305 2.305 0 01-.567-.267C8.07 8.34 8 8.114 8 8c0-.114.07-.34.433-.582zM11 12.849v-1.698c.22.071.412.164.567.267.364.243.433.468.433.582 0 .114-.07.34-.433.582a2.305 2.305 0 01-.567.267z" />
+                                                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-13a1 1 0 10-2 0v.092a4.535 4.535 0 00-1.676.662C6.602 6.234 6 7.009 6 8c0 .99.602 1.765 1.324 2.246.48.32 1.054.545 1.676.662v1.941c-.391-.127-.68-.317-.843-.504a1 1 0 10-1.51 1.31c.562.649 1.413 1.076 2.353 1.253V15a1 1 0 102 0v-.092a4.535 4.535 0 001.676-.662C13.398 13.766 14 12.991 14 12c0-.99-.602-1.765-1.324-2.246A4.535 4.535 0 0011 9.092V7.151c.391.127.68.317.843.504a1 1 0 101.511-1.31c-.563-.649-1.413-1.076-2.354-1.253V5z" clipRule="evenodd" />
+                                                    </svg>
+                                                    ${person.hourlyRate}/hour
+                                                </div>
+                                            )}
+
+                                            {person.availability?.isAvailableNow && (
+                                                <div className="text-sm font-medium text-green-700 mb-2">
+                                                    <svg className="inline-block h-4 w-4 text-green-500 mr-1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
+                                                    </svg>
+                                                    Available Now
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        <div className="mt-4">
+                                            <h4 className="text-xs font-medium text-gray-500 uppercase tracking-wider">Skills</h4>
+                                            <div className="mt-1 flex flex-wrap gap-1">
+                                                {person.skills?.slice(0, 5).map((skill) => (
+                                                    <span
+                                                        key={skill}
+                                                        className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800"
+                                                    >
+                                                        {skill}
+                                                    </span>
+                                                ))}
+                                                {person.skills?.length > 5 && (
+                                                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                                                        +{person.skills.length - 5} more
                                                     </span>
                                                 )}
-                                            </h3>
-                                            {person.businessName && (
-                                                <p className="text-sm text-gray-500">{person.businessName}</p>
-                                            )}
-                                            <div className="mt-1 flex items-center">
-                                                <div className="flex items-center">
-                                                    {[0, 1, 2, 3, 4].map((rating) => (
-                                                        <svg
-                                                            key={rating}
-                                                            className={`h-4 w-4 ${rating < Math.floor(person.averageRating)
-                                                                ? 'text-yellow-400'
-                                                                : rating < person.averageRating
-                                                                    ? 'text-yellow-300'
-                                                                    : 'text-gray-300'
-                                                                }`}
-                                                            fill="currentColor"
-                                                            viewBox="0 0 20 20"
-                                                        >
-                                                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                                            </div>
+                                        </div>
+
+                                        <div className="mt-4 flex justify-between items-center">
+                                            <div>
+                                                {person.insurance?.hasInsurance && (
+                                                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                                        <svg className="mr-1 h-3 w-3 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                                                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                                                         </svg>
-                                                    ))}
-                                                </div>
-                                                <span className="ml-1 text-sm text-gray-500">
-                                                    {person.averageRating.toFixed(1)} ({person.totalReviews} reviews)
-                                                </span>
+                                                        Insured
+                                                    </span>
+                                                )}
                                             </div>
+
                                         </div>
-                                        {session?.user?.role === 'customer' && (
-                                            <button
-                                                onClick={() => toggleFavorite(person._id)}
-                                                className="ml-2 p-1 rounded-full hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
-                                            >
-                                                <svg
-                                                    className={`h-6 w-6 ${favorites.includes(person._id) ? 'text-red-500 fill-current' : 'text-gray-400'}`}
-                                                    xmlns="http://www.w3.org/2000/svg"
-                                                    viewBox="0 0 24 24"
-                                                    stroke="currentColor"
-                                                    fill="none"
-                                                >
-                                                    <path
-                                                        strokeLinecap="round"
-                                                        strokeLinejoin="round"
-                                                        strokeWidth={favorites.includes(person._id) ? 0 : 2}
-                                                        d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
-                                                    />
-                                                </svg>
-                                            </button>
-                                        )}
+
                                     </div>
-
-                                    <div className="mt-4">
-                                        <div className="text-sm text-gray-900 mb-2">
-                                            <svg className="inline-block h-4 w-4 text-gray-400 mr-1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                                                <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
-                                            </svg>
-                                            {person.location?.city}, {person.location?.state}
-                                        </div>
-
-                                        {person.yearsOfExperience && (
-                                            <div className="text-sm text-gray-900 mb-2">
-                                                <svg className="inline-block h-4 w-4 text-gray-400 mr-1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                                                    <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd" />
-                                                </svg>
-                                                {person.yearsOfExperience} years of experience
-                                            </div>
-                                        )}
-
-                                        {person.hourlyRate && (
-                                            <div className="text-sm text-gray-900 mb-2">
-                                                <svg className="inline-block h-4 w-4 text-gray-400 mr-1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                                                    <path d="M8.433 7.418c.155-.103.346-.196.567-.267v1.698a2.305 2.305 0 01-.567-.267C8.07 8.34 8 8.114 8 8c0-.114.07-.34.433-.582zM11 12.849v-1.698c.22.071.412.164.567.267.364.243.433.468.433.582 0 .114-.07.34-.433.582a2.305 2.305 0 01-.567.267z" />
-                                                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-13a1 1 0 10-2 0v.092a4.535 4.535 0 00-1.676.662C6.602 6.234 6 7.009 6 8c0 .99.602 1.765 1.324 2.246.48.32 1.054.545 1.676.662v1.941c-.391-.127-.68-.317-.843-.504a1 1 0 10-1.51 1.31c.562.649 1.413 1.076 2.353 1.253V15a1 1 0 102 0v-.092a4.535 4.535 0 001.676-.662C13.398 13.766 14 12.991 14 12c0-.99-.602-1.765-1.324-2.246A4.535 4.535 0 0011 9.092V7.151c.391.127.68.317.843.504a1 1 0 101.511-1.31c-.563-.649-1.413-1.076-2.354-1.253V5z" clipRule="evenodd" />
-                                                </svg>
-                                                ${person.hourlyRate}/hour
-                                            </div>
-                                        )}
-
-                                        {person.availability?.isAvailableNow && (
-                                            <div className="text-sm font-medium text-green-700 mb-2">
-                                                <svg className="inline-block h-4 w-4 text-green-500 mr-1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                                                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
-                                                </svg>
-                                                Available Now
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    <div className="mt-4">
-                                        <h4 className="text-xs font-medium text-gray-500 uppercase tracking-wider">Skills</h4>
-                                        <div className="mt-1 flex flex-wrap gap-1">
-                                            {person.skills?.slice(0, 5).map((skill) => (
-                                                <span
-                                                    key={skill}
-                                                    className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800"
-                                                >
-                                                    {skill}
-                                                </span>
-                                            ))}
-                                            {person.skills?.length > 5 && (
-                                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                                                    +{person.skills.length - 5} more
-                                                </span>
-                                            )}
-                                        </div>
-                                    </div>
-
-                                    <div className="mt-4 flex justify-between items-center">
-                                        <div>
-                                            {person.insurance?.hasInsurance && (
-                                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                                    <svg className="mr-1 h-3 w-3 text-green-500" fill="currentColor" viewBox="0 0 20 20">
-                                                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                                                    </svg>
-                                                    Insured
-                                                </span>
-                                            )}
-                                        </div>
+                                    <div className=''>
                                         <Link
                                             href={`/tradespeople/${person._id}`}
                                             className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
@@ -532,6 +539,8 @@ export default function TradespeopleDirectory() {
                                         </Link>
                                     </div>
                                 </div>
+
+
                             </div>
                         ))}
                     </div>

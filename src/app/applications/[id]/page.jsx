@@ -387,9 +387,10 @@ export default function ApplicationDetailPage() {
                         id="notes"
                         name="notes"
                         rows={3}
-                        className="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md"
+                        className="shadow-sm p-4 border focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md"
                         value={notes}
                         onChange={(e) => setNotes(e.target.value)}
+                        placeholder='write here'
                       />
                     </div>
                     <div className="mt-2 flex justify-end space-x-3">

@@ -479,8 +479,8 @@ export default function JobApplicationPage() {
                                         required
                                         value={formData.coverLetter}
                                         onChange={handleChange}
-                                        placeholder="Describe your relevant experience, skills, and why you're interested in this job. Be specific about how you can help with this project."
-                                        className="mt-1 focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
+                                        placeholder="Describe  your relevant experience, skills, and why you're interested in this job. Be specific about how you can help with this project."
+                                        className="mt-1 p-4 border focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
                                     />
                                 </div>
                             </div>

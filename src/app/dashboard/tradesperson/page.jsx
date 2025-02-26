@@ -96,8 +96,9 @@ console.log(useContext(AuthContext));
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
           <p className="mt-1 text-sm text-gray-500">
-            Welcome back, {session.user.firstName || session.user.name}! Here's what's happening with your account.
+            Welcome back, <span className="font-bold text-black">{session.user.firstName || session.user.name}</span>! Here's what's happening with your account.
           </p>
+          <hr className="border-1 mt-2 w-2/12 border-gray-400"/>
         </div>
 
         {dashboardData.error && (

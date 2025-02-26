@@ -488,12 +488,12 @@ export default function MessagesPage() {
                                     alt={message.sender?.firstName}
                                   />
                                 </div>
-                                <div className={`relative mx-2 px-4 py-2 rounded-lg ${isCurrentUser
-                                  ? 'bg-blue-600 text-white'
-                                  : 'bg-white text-gray-800 border border-gray-200'
+                                <div className={`relative mx-2 px-8 py-2 ${isCurrentUser
+                                  ? 'bg-blue-600 rounded-3xl rounded-tr-none text-white'
+                                  : 'bg-white rounded-3xl rounded-tl-none text-gray-800 border border-gray-200'
                                   }`}>
                                   <p className="text-sm">{message.content}</p>
-                                  <span className={`block text-xs mt-1 ${isCurrentUser ? 'text-blue-200' : 'text-gray-500'}`}>
+                                  <span className={` text-[10px] border-t mt-1 ${isCurrentUser ? 'text-blue-200 border-blue-200' : 'text-gray-500'}`}>
                                     {formatDate(message.createdAt)}
                                   </span>
                                 </div>
@@ -523,7 +523,7 @@ export default function MessagesPage() {
                     <div className="flex-grow">
                       <textarea
                         rows="1"
-                        className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm resize-none"
+                        className="block border p-4 w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm resize-none"
                         placeholder="Type a message..."
                         value={newMessage}
                         onChange={(e) => setNewMessage(e.target.value)}
