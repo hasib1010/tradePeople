@@ -109,7 +109,6 @@ export default function Navbar() {
       switch (userRole) {
         case "admin":
           return [
-
             {
               href: "/dashboard/admin",
               label: "Dashboard",
@@ -121,9 +120,9 @@ export default function Navbar() {
               isActive: pathname.includes("/admin/users")
             },
             {
-              href: "/admin/jobs",
+              href: "/admin/jobs/manage",
               label: "Manage Jobs",
-              isActive: pathname.includes("/admin/jobs")
+              isActive: pathname.includes("/admin/jobs/manage")
             },
             {
               href: "/admin/verifications",
@@ -322,10 +321,10 @@ export default function Navbar() {
                         {unreadMessages > 99 ? '99+' : unreadMessages}
                       </span>
                     )}
-                    {session.user.image ? (
+                    {session.user.profileImage || session.user.image ? (
                       <Image
-                        className="h-10 w-10 object-cover  rounded-full"
-                        src={session.user.image}
+                        className="h-10 w-10 object-cover rounded-full"
+                        src={session.user.profileImage || session.user.image}
                         alt={session.user.name || "User profile"}
                         width={32}
                         height={32}

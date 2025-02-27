@@ -1,9 +1,10 @@
-// C:\Projects\Hasib\tradepeople\src\app\applications\[id]\page.jsx
+// src/app/applications/[id]/page.jsx
 "use client"
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import Link from 'next/link';
+import CompleteJobModal from '@/components/jobs/CompleteJobModal';
 
 export default function ApplicationDetailPage() {
   const { id } = useParams();
@@ -16,6 +17,7 @@ export default function ApplicationDetailPage() {
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const [notes, setNotes] = useState('');
   const [showNotesForm, setShowNotesForm] = useState(false);
+  const [showCompleteJobModal, setShowCompleteJobModal] = useState(false);
 
   useEffect(() => {
     const fetchApplicationDetails = async () => {
@@ -70,6 +72,38 @@ export default function ApplicationDetailPage() {
     } catch (err) {
       console.error('Error updating application status:', err);
       alert('Failed to update status: ' + err.message);
+    } finally {
+      setUpdatingStatus(false);
+    }
+  };
+
+  // Function to mark job as in progress (when an application is accepted)
+  const markJobInProgress = async () => {
+    setUpdatingStatus(true);
+    try {
+      const response = await fetch(`/api/jobs/${application.job._id}/status`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ 
+          status: 'in-progress',
+          selectedTradesperson: application.tradesperson._id
+        })
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to update job status');
+      }
+      
+      // Update the local application state with the updated job status
+      const updatedApplication = { ...application };
+      updatedApplication.job.status = 'in-progress';
+      setApplication(updatedApplication);
+      
+    } catch (err) {
+      console.error('Error updating job status:', err);
+      alert('Failed to update job status: ' + err.message);
     } finally {
       setUpdatingStatus(false);
     }
@@ -132,6 +166,21 @@ export default function ApplicationDetailPage() {
         return 'bg-red-100 text-red-800';
       case 'withdrawn':
         return 'bg-gray-100 text-gray-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const getJobStatusBadgeClasses = (status) => {
+    switch (status) {
+      case 'open':
+        return 'bg-blue-100 text-blue-800';
+      case 'in-progress':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'completed':
+        return 'bg-green-100 text-green-800';
+      case 'canceled':
+        return 'bg-red-100 text-red-800';
       default:
         return 'bg-gray-100 text-gray-800';
     }
@@ -202,10 +251,16 @@ export default function ApplicationDetailPage() {
             Submitted on {formatDate(application.submittedAt)}
           </p>
           
-          <div className="mt-2">
+          <div className="mt-2 flex space-x-2">
             <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusBadgeClasses(application.status)}`}>
-              {application.status.charAt(0).toUpperCase() + application.status.slice(1)}
+              Application: {application.status.charAt(0).toUpperCase() + application.status.slice(1)}
             </span>
+            
+            {application.job && application.job.status && (
+              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getJobStatusBadgeClasses(application.job.status)}`}>
+                Job: {application.job.status.charAt(0).toUpperCase() + application.job.status.slice(1)}
+              </span>
+            )}
           </div>
         </div>
 
@@ -546,7 +601,7 @@ export default function ApplicationDetailPage() {
                 )}
               </div>
             </div>
-
+            
             {/* Application actions */}
             <div className="bg-white shadow overflow-hidden sm:rounded-lg mb-6">
               <div className="px-4 py-5 sm:px-6 border-b border-gray-200">
@@ -624,26 +679,52 @@ export default function ApplicationDetailPage() {
                   </div>
                 )}
 
+                {/* Accepted application state */}
                 {application.status === 'accepted' && (
-                  <div className="rounded-md bg-green-50 p-4">
-                    <div className="flex">
-                      <div className="flex-shrink-0">
-                        <svg className="h-5 w-5 text-green-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                        </svg>
-                      </div>
-                      <div className="ml-3">
-                        <p className="text-sm font-medium text-green-800">
-                          This application has been accepted. 
-                        </p>
-                        <p className="mt-2 text-sm text-green-700">
-                          {isJobOwner ? 
-                            "You can now communicate directly with the tradesperson to coordinate the job." :
-                            "You can now communicate directly with the customer to coordinate the job."
-                          }
-                        </p>
+                  <div className="space-y-4">
+                    <div className="rounded-md bg-green-50 p-4 mb-4">
+                      <div className="flex">
+                        <div className="flex-shrink-0">
+                          <svg className="h-5 w-5 text-green-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                          </svg>
+                        </div>
+                        <div className="ml-3">
+                          <p className="text-sm font-medium text-green-800">
+                            This application has been accepted. 
+                          </p>
+                          <p className="mt-2 text-sm text-green-700">
+                            {isJobOwner ? 
+                              "You can now communicate directly with the tradesperson to coordinate the job." :
+                              "You can now communicate directly with the customer to coordinate the job."
+                            }
+                          </p>
+                        </div>
                       </div>
                     </div>
+                    
+                    {/* Mark job as in-progress button (only for job owner when job is still in 'open' status) */}
+                    {isJobOwner && application.job.status === 'open' && (
+                      <button
+                        type="button"
+                        onClick={markJobInProgress}
+                        disabled={updatingStatus}
+                        className="w-full inline-flex justify-center items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                      >
+                        {updatingStatus ? 'Processing...' : 'Start Job'}
+                      </button>
+                    )}
+                    
+                    {/* Complete job button (only for job owner when job is in 'in-progress' status) */}
+                    {isJobOwner && application.job.status === 'in-progress' && (
+                      <button
+                        type="button"
+                        onClick={() => setShowCompleteJobModal(true)}
+                        className="w-full inline-flex justify-center items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                      >
+                        Mark Job as Complete
+                      </button>
+                    )}
                   </div>
                 )}
 
@@ -735,6 +816,17 @@ export default function ApplicationDetailPage() {
           </div>
         </div>
       </div>
+      
+      {/* Complete Job Modal */}
+      {showCompleteJobModal && (
+        <CompleteJobModal
+          isOpen={showCompleteJobModal}
+          closeModal={() => setShowCompleteJobModal(false)}
+          jobId={application.job._id}
+          jobTitle={application.job.title}
+          budget={application.job.budget}
+        />
+      )}
     </div>
   );
 }

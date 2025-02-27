@@ -23,7 +23,7 @@ export default function AdminDashboard() {
         totalUsers: 0,
         totalTradespeople: 0,
         totalCustomers: 0,
-        activeJobs: 0,
+        activeJobs: 0,  
         pendingVerifications: 0,
         totalCredits: 0,
         totalRevenue: 0

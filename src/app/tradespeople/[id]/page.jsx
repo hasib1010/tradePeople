@@ -761,100 +761,109 @@ export default function TradespersonProfile() {
         )}
 
         {/* Reviews Tab */}
-        {activeTab === 'reviews' && (
-          <div>
-            <div className="space-y-8">
-              <div>
-                <h2 className="text-xl font-bold text-gray-900">Customer Reviews</h2>
-                <div className="mt-3 flex items-center">
-                  <div className="flex items-center">
-                    {[0, 1, 2, 3, 4].map((rating) => (
-                      <svg
-                        key={rating}
-                        className={`h-5 w-5 ${
-                          rating < Math.floor(tradesperson.averageRating)
-                            ? 'text-yellow-400'
-                            : rating < tradesperson.averageRating
-                            ? 'text-yellow-300'
-                            : 'text-gray-300'
-                        }`}
-                        fill="currentColor"
-                        viewBox="0 0 20 20"
-                      >
-                        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                      </svg>
-                    ))}
+      {/* Reviews Tab */}
+{activeTab === 'reviews' && (
+  <div>
+    <div className="space-y-8">
+      <div>
+        <h2 className="text-xl font-bold text-gray-900">Customer Reviews</h2>
+        <div className="mt-3 flex items-center">
+          <div className="flex items-center">
+            {[0, 1, 2, 3, 4].map((rating) => (
+              <svg
+                key={rating}
+                className={`h-5 w-5 ${
+                  rating < Math.floor(tradesperson.averageRating || 0)
+                    ? 'text-yellow-400'
+                    : 'text-gray-300'
+                }`}
+                fill="currentColor"
+                viewBox="0 0 20 20"
+              >
+                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+              </svg>
+            ))}
+          </div>
+          <p className="ml-2 text-sm text-gray-700">
+            <span className="font-medium">{parseFloat(tradesperson.averageRating || 0).toFixed(1)} out of 5 stars</span> ({tradesperson.totalReviews || 0} reviews)
+          </p>
+        </div>
+      </div>
+
+      <div className="flow-root">
+        {tradesperson.reviews && tradesperson.reviews.length > 0 ? (
+          <ul className="-my-8">
+            {tradesperson.reviews.map((review) => (
+              <li key={review._id} className="py-8 border-b border-gray-200">
+                <div className="flex items-center">
+                  <img
+                    src={review.reviewer?.profileImage || 'https://i.ibb.co.com/HfL0Fr7P/default-profile.jpg'}
+                    alt={`${review.reviewer?.firstName || 'Anonymous'} ${review.reviewer?.lastName || 'User'}`}
+                    className="h-12 w-12 rounded-full object-cover"
+                  />
+                  <div className="ml-4">
+                    <h4 className="text-sm font-bold text-gray-900">
+                      {review.reviewer?.firstName || 'Anonymous'} {review.reviewer?.lastName || 'User'}
+                    </h4>
+                    <div className="mt-1 flex items-center">
+                      {[0, 1, 2, 3, 4].map((star) => (
+                        <svg
+                          key={star}
+                          className={`h-4 w-4 ${
+                            star < (review.rating || 0)
+                              ? 'text-yellow-400'
+                              : 'text-gray-300'
+                          }`}
+                          fill="currentColor"
+                          viewBox="0 0 20 20"
+                        >
+                          <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                        </svg>
+                      ))}
+                      <p className="ml-2 text-sm text-gray-500">
+                        {new Date(review.createdAt).toLocaleDateString()}
+                      </p>
+                    </div>
                   </div>
-                  <p className="ml-2 text-sm text-gray-700">
-                    <span className="font-medium">{tradesperson.averageRating.toFixed(1)} out of 5 stars</span> ({tradesperson.totalReviews} reviews)
-                  </p>
                 </div>
-              </div>
-
-              {/* Review filters and sorting would go here in a real app */}
-
-              <div className="flow-root">
-                <ul className="-my-8">
-                  {[1, 2, 3].map((idx) => (
-                    <li key={idx} className="py-8 border-b border-gray-200">
-                      <div className="flex items-center">
-                        <img
-                          src={`https://randomuser.me/api/portraits/${idx % 2 === 0 ? 'men' : 'women'}/${idx + 50}.jpg`}
-                          alt={`Reviewer ${idx}`}
-                          className="h-12 w-12 rounded-full"
-                        />
-                        <div className="ml-4">
-                          <h4 className="text-sm font-bold text-gray-900">John Doe</h4>
-                          <div className="mt-1 flex items-center">
-                            {[0, 1, 2, 3, 4].map((rating) => (
-                              <svg
-                                key={rating}
-                                className={`h-4 w-4 ${
-                                  rating < 5 - idx
-                                    ? 'text-yellow-400'
-                                    : 'text-gray-300'
-                                }`}
-                                fill="currentColor"
-                                viewBox="0 0 20 20"
-                              >
-                                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                              </svg>
-                            ))}
-                            <p className="ml-2 text-sm text-gray-500">
-                              {new Date(2025, 0, idx * 7).toLocaleDateString()}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="mt-4 space-y-6 text-base italic text-gray-600">
-                        <p>
-                          {idx === 1 
-                            ? "Excellent work! Completed the project on time and within budget. Very professional and knowledgeable." 
-                            : idx === 2 
-                            ? "Good communication throughout the project. Quality work and very attentive to details."
-                            : "Showed up on time, completed work as promised, and left the work area clean. Would hire again!"}
-                        </p>
-                      </div>
-                      <div className="mt-4">
-                        <p className="text-sm font-medium text-gray-500">
-                          Project: {idx === 1 ? 'Bathroom Renovation' : idx === 2 ? 'Electrical Rewiring' : 'Drywall Repair'}
-                        </p>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-                {tradesperson.totalReviews > 3 && (
-                  <div className="mt-8 text-sm text-center">
-                    <a href="#" className="font-medium text-blue-600 hover:text-blue-500">
-                      Read all {tradesperson.totalReviews} reviews
-                      <span aria-hidden="true"> &rarr;</span>
-                    </a>
+                <div className="mt-4">
+                  {review.title && (
+                    <h5 className="font-medium text-gray-900 mb-1">{review.title}</h5>
+                  )}
+                  <p className="text-gray-600 italic">{review.content}</p>
+                </div>
+                {review.projectName && (
+                  <div className="mt-3">
+                    <p className="text-sm font-medium text-gray-500">
+                      Project: {review.projectName}
+                    </p>
                   </div>
                 )}
-              </div>
-            </div>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <div className="text-center py-12 bg-gray-50 rounded-lg">
+            <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M19 9l-7 7-7-7" />
+            </svg>
+            <h3 className="mt-2 text-base font-medium text-gray-900">No reviews yet</h3>
+            <p className="mt-1 text-sm text-gray-500">This tradesperson hasn't received any reviews yet.</p>
           </div>
         )}
+        
+        {tradesperson.reviews && tradesperson.reviews.length > 0 && tradesperson.totalReviews > tradesperson.reviews.length && (
+          <div className="mt-8 text-sm text-center">
+            <a href="#" className="font-medium text-blue-600 hover:text-blue-500">
+              View all {tradesperson.totalReviews} reviews
+              <span aria-hidden="true"> &rarr;</span>
+            </a>
+          </div>
+        )}
+      </div>
+    </div>
+  </div>
+)}
 
         {/* Credentials Tab */}
         {activeTab === 'credentials' && (

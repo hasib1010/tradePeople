@@ -15,6 +15,7 @@ export default function TradespeopleDirectory() {
     const [error, setError] = useState(null);
     const [favorites, setFavorites] = useState([]);
 
+    
     // Filter states
     const [filters, setFilters] = useState({
         search: searchParams.get('search') || '',
@@ -27,6 +28,7 @@ export default function TradespeopleDirectory() {
     });
 
     const [showFilters, setShowFilters] = useState(false);
+    const [expandedReviews, setExpandedReviews] = useState({});
 
     // Skills options based on your model
     const skillOptions = [
@@ -161,6 +163,24 @@ export default function TradespeopleDirectory() {
         } catch (err) {
             console.error('Error updating favorite:', err);
         }
+    };
+
+    const toggleReviewExpansion = (tradespersonId) => {
+        setExpandedReviews(prev => ({
+            ...prev,
+            [tradespersonId]: !prev[tradespersonId]
+        }));
+    };
+
+    // Format date helper
+    const formatDate = (dateString) => {
+        if (!dateString) return '';
+        const date = new Date(dateString);
+        return date.toLocaleDateString('en-US', { 
+            year: 'numeric', 
+            month: 'short', 
+            day: 'numeric' 
+        });
     };
 
     if (loading) {
@@ -387,77 +407,89 @@ export default function TradespeopleDirectory() {
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         {tradespeople.map((person) => (
                             <div key={person._id} className="bg-white overflow-hidden shadow rounded-lg">
-
-                                <div className=' p-6 h-full flex flex-col justify-between items-center'>
-                                    <div className="">
-                                        <div className="flex items-center">
-                                            <div className="flex-shrink-0 h-16 w-16">
-                                                <img
-                                                    className="h-16 w-16 rounded-full object-cover"
-                                                    src={person.profileImage || 'https://i.ibb.co.com/HfL0Fr7P/default-profile.jpg'}
-                                                    alt={`${person.firstName} ${person.lastName}`}
-                                                />
-                                            </div>
-                                            <div className="ml-4 flex-1">
-                                                <h3 className="text-lg font-medium text-gray-900">
-                                                    {person.firstName} {person.lastName}
-                                                    {person.isVerified && (
-                                                        <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
-                                                            <svg className="mr-1 h-3 w-3 text-green-500" fill="currentColor" viewBox="0 0 20 20">
-                                                                <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                                                            </svg>
-                                                            Verified
-                                                        </span>
-                                                    )}
-                                                </h3>
-                                                {person.businessName && (
-                                                    <p className="text-sm text-gray-500">{person.businessName}</p>
-                                                )}
-                                                <div className="mt-1 flex items-center">
-                                                    <div className="flex items-center">
-                                                        {[0, 1, 2, 3, 4].map((rating) => (
-                                                            <svg
-                                                                key={rating}
-                                                                className={`h-4 w-4 ${rating < Math.floor(person.averageRating)
-                                                                    ? 'text-yellow-400'
-                                                                    : rating < person.averageRating
-                                                                        ? 'text-yellow-300'
-                                                                        : 'text-gray-300'
-                                                                    }`}
-                                                                fill="currentColor"
-                                                                viewBox="0 0 20 20"
-                                                            >
-                                                                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                                                            </svg>
-                                                        ))}
-                                                    </div>
-                                                    <span className="ml-1 text-sm text-gray-500">
-                                                        {person.averageRating.toFixed(1)} ({person.totalReviews} reviews)
-                                                    </span>
-                                                </div>
-                                            </div>
-                                            {session?.user?.role === 'customer' && (
-                                                <button
-                                                    onClick={() => toggleFavorite(person._id)}
-                                                    className="ml-2 p-1 rounded-full hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
-                                                >
-                                                    <svg
-                                                        className={`h-6 w-6 ${favorites.includes(person._id) ? 'text-red-500 fill-current' : 'text-gray-400'}`}
-                                                        xmlns="http://www.w3.org/2000/svg"
-                                                        viewBox="0 0 24 24"
-                                                        stroke="currentColor"
-                                                        fill="none"
-                                                    >
-                                                        <path
-                                                            strokeLinecap="round"
-                                                            strokeLinejoin="round"
-                                                            strokeWidth={favorites.includes(person._id) ? 0 : 2}
-                                                            d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
-                                                        />
-                                                    </svg>
-                                                </button>
-                                            )}
+                                <div className="p-6">
+                                    <div className="flex items-center">
+                                        <div className="flex-shrink-0 h-16 w-16">
+                                            <img
+                                                className="h-16 w-16 rounded-full object-cover"
+                                                src={person.profileImage || 'https://i.ibb.co.com/HfL0Fr7P/default-profile.jpg'}
+                                                alt={`${person.firstName} ${person.lastName}`}
+                                            />
                                         </div>
+                                        <div className="ml-4 flex-1">
+                                            <h3 className="text-lg font-medium text-gray-900">
+                                                {person.firstName} {person.lastName}
+                                                {person.isVerified && (
+                                                    <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
+                                                        <svg className="mr-1 h-3 w-3 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                                                            <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                                                        </svg>
+                                                        Verified
+                                                    </span>
+                                                )}
+                                            </h3>
+                                            {person.businessName && (
+                                                <p className="text-sm text-gray-500">{person.businessName}</p>
+                                            )}
+                                           <div className="mt-1 flex items-center">
+    <div className="flex items-center">
+        {[0, 1, 2, 3, 4].map((rating) => {
+            // Calculate effective rating from reviews if averageRating is 0
+            const effectiveRating = person.averageRating || 
+                (person.reviews?.length > 0 
+                    ? person.reviews.reduce((sum, r) => sum + r.rating, 0) / person.reviews.length 
+                    : 0);
+            
+            return (
+                <svg
+                    key={rating}
+                    className={`h-4 w-4 ${
+                        rating < Math.floor(effectiveRating)
+                            ? 'text-yellow-400'
+                            : rating < effectiveRating
+                                ? 'text-yellow-300'
+                                : 'text-gray-300'
+                    }`}
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                >
+                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                </svg>
+            );
+        })}
+    </div>
+    <span className="ml-1 text-sm text-gray-500">
+        {/* Calculate average from reviews array if averageRating is 0 */}
+        {(person.averageRating || 
+          (person.reviews?.length > 0 
+            ? (person.reviews.reduce((sum, r) => sum + r.rating, 0) / person.reviews.length).toFixed(1) 
+            : '0.0'))} 
+        ({person.totalReviews || person.reviews?.length || 0} review{(person.totalReviews || person.reviews?.length) !== 1 ? 's' : ''})
+    </span>
+</div>
+                                        </div>
+                                        {session?.user?.role === 'customer' && (
+                                            <button
+                                                onClick={() => toggleFavorite(person._id)}
+                                                className="ml-2 p-1 rounded-full hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                                            >
+                                                <svg
+                                                    className={`h-6 w-6 ${favorites.includes(person._id) ? 'text-red-500 fill-current' : 'text-gray-400'}`}
+                                                    xmlns="http://www.w3.org/2000/svg"
+                                                    viewBox="0 0 24 24"
+                                                    stroke="currentColor"
+                                                    fill="none"
+                                                >
+                                                    <path
+                                                        strokeLinecap="round"
+                                                        strokeLinejoin="round"
+                                                        strokeWidth={favorites.includes(person._id) ? 0 : 2}
+                                                        d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
+                                                    />
+                                                </svg>
+                                            </button>
+                                        )}
+                                    </div>
 
                                         <div className="mt-4">
                                             <div className="text-sm text-gray-900 mb-2">
@@ -496,24 +528,90 @@ export default function TradespeopleDirectory() {
                                             )}
                                         </div>
 
+                                    <div className="mt-4">
+                                        <h4 className="text-xs font-medium text-gray-500 uppercase tracking-wider">Skills</h4>
+                                        <div className="mt-1 flex flex-wrap gap-1">
+                                            {person.skills?.slice(0, 5).map((skill) => (
+                                                <span
+                                                    key={skill}
+                                                    className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800"
+                                                >
+                                                    {skill}
+                                                </span>
+                                            ))}
+                                            {person.skills?.length > 5 && (
+                                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                                                    +{person.skills.length - 5} more
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
+                                    
+                                    {/* Reviews Section */}
+                                    {person.reviews && person.reviews.length > 0 && (
                                         <div className="mt-4">
-                                            <h4 className="text-xs font-medium text-gray-500 uppercase tracking-wider">Skills</h4>
-                                            <div className="mt-1 flex flex-wrap gap-1">
-                                                {person.skills?.slice(0, 5).map((skill) => (
-                                                    <span
-                                                        key={skill}
-                                                        className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800"
-                                                    >
-                                                        {skill}
-                                                    </span>
+                                            <div className="flex justify-between items-center mb-2">
+                                                <h4 className="text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                    Recent Reviews
+                                                </h4>
+                                                <button
+                                                    onClick={() => toggleReviewExpansion(person._id)}
+                                                    className="text-xs text-green-600 hover:text-green-500 focus:outline-none"
+                                                >
+                                                    {expandedReviews[person._id] ? 'Show Less' : 'Show All'}
+                                                </button>
+                                            </div>
+                                            
+                                            <div className="space-y-3">
+                                                {(expandedReviews[person._id] ? person.reviews : person.reviews.slice(0, 1)).map((review) => (
+                                                    <div key={review._id} className="bg-gray-50 rounded-md p-3">
+                                                        <div className="flex items-center mb-2">
+                                                            <div className="flex-shrink-0 h-8 w-8">
+                                                                <img
+                                                                    className="h-8 w-8 rounded-full object-cover"
+                                                                    src={review.reviewer?.profileImage || 'https://i.ibb.co.com/HfL0Fr7P/default-profile.jpg'}
+                                                                    alt={`${review.reviewer?.firstName || 'Anonymous'} ${review.reviewer?.lastName || 'User'}`}
+                                                                />
+                                                            </div>
+                                                            <div className="ml-2 flex-1">
+                                                                <p className="text-xs font-medium text-gray-900">
+                                                                    {review.reviewer?.firstName || 'Anonymous'} {review.reviewer?.lastName || 'User'}
+                                                                </p>
+                                                                <div className="flex items-center">
+                                                                    <div className="flex items-center">
+                                                                        {[0, 1, 2, 3, 4].map((rating) => (
+                                                                            <svg
+                                                                                key={rating}
+                                                                                className={`h-3 w-3 ${rating < review.rating ? 'text-yellow-400' : 'text-gray-300'}`}
+                                                                                fill="currentColor"
+                                                                                viewBox="0 0 20 20"
+                                                                            >
+                                                                                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                                                                            </svg>
+                                                                        ))}
+                                                                    </div>
+                                                                    <span className="ml-2 text-xs text-gray-500">
+                                                                        {formatDate(review.createdAt)}
+                                                                    </span>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <h5 className="text-sm font-medium text-gray-900">{review.title}</h5>
+                                                        <p className="text-xs text-gray-600 mt-1 line-clamp-2">{review.content}</p>
+                                                    </div>
                                                 ))}
-                                                {person.skills?.length > 5 && (
-                                                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                                                        +{person.skills.length - 5} more
-                                                    </span>
+                                                
+                                                {!expandedReviews[person._id] && person.reviews.length > 1 && (
+                                                    <button 
+                                                        onClick={() => toggleReviewExpansion(person._id)}
+                                                        className="w-full text-center text-xs text-green-600 hover:text-green-500 py-1 border border-dashed border-gray-200 rounded-md focus:outline-none"
+                                                    >
+                                                        View {person.reviews.length > 2 ? `all ${person.totalReviews}` : 'more'} reviews
+                                                    </button>
                                                 )}
                                             </div>
                                         </div>
+                                    )}
 
                                         <div className="mt-4 flex justify-between items-center">
                                             <div>
@@ -541,7 +639,7 @@ export default function TradespeopleDirectory() {
                                 </div>
 
 
-                            </div>
+                             
                         ))}
                     </div>
                 )}

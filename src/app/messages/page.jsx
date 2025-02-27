@@ -25,6 +25,7 @@ export default function MessagesPage() {
   const [loadingMessages, setLoadingMessages] = useState(false);
   const messagesEndRef = useRef(null);
   const [socket, setSocket] = useState(null);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false); // State for mobile sidebar toggle
 
   // Fetch Conversations
   const fetchConversations = useCallback(async () => {
@@ -154,9 +155,7 @@ export default function MessagesPage() {
   }, [
     status,
     session?.user?.id,
-    // Include activeConversation in the dependency array
     activeConversation?.user._id,
-    // Include fetchConversations to ensure it uses the latest state
     fetchConversations
   ]);
 
@@ -195,6 +194,7 @@ export default function MessagesPage() {
       setError(err.message);
     } finally {
       setLoadingMessages(false);
+      setIsSidebarOpen(false); // Close sidebar on mobile after selecting a conversation
     }
   }, [socket, markConversationAsRead]);
 
@@ -261,7 +261,6 @@ export default function MessagesPage() {
       setSendingMessage(false);
     }
   }, [newMessage, activeConversation, socket, session, fetchConversations]);
-
 
   // Auto-scroll to bottom when messages change
   useEffect(() => {
@@ -330,15 +329,23 @@ export default function MessagesPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto">
-        <div className="h-screen flex overflow-hidden">
+        <div className="h-screen flex flex-col md:flex-row overflow-hidden">
+          {/* Mobile Sidebar Toggle Button */}
+          <button
+            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+            className="md:hidden p-4 bg-blue-600 text-white"
+          >
+            {isSidebarOpen ? 'Close' : 'Open'} Conversations
+          </button>
+
           {/* Conversations Sidebar */}
-          <div className="w-80 border-r border-gray-200 bg-white flex-shrink-0">
+          <div className={`${isSidebarOpen ? 'block' : 'hidden'} md:block w-full md:w-80 border-r border-gray-200 bg-white flex-shrink-0`}>
             <div className="h-fit flex flex-col">
               <div className="p-4 border-b border-gray-200">
                 <h1 className="text-xl font-semibold text-gray-900">Messages</h1>
               </div>
 
-              <div className="flex-1  overflow-y-auto">
+              <div className="flex-1 overflow-y-auto">
                 {conversations.length > 0 ? (
                   <ul className="divide-y divide-gray-200">
                     {conversations.map((conversation) => (
@@ -452,7 +459,7 @@ export default function MessagesPage() {
                 </div>
 
                 {/* Messages Area */}
-                <div className="flex-1 overflow-y-auto  p-4 bg-gray-50">
+                <div className="flex-1 overflow-y-auto p-4 bg-gray-50">
                   {loadingMessages ? (
                     <div className="flex justify-center items-center h-full">
                       <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
