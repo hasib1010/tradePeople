@@ -1,4 +1,4 @@
-    // src/app/api/profile/route.js
+// src/app/api/profile/route.js
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import authOptions from "@/lib/auth";
@@ -45,7 +45,18 @@ export async function GET(request) {
   }
 }
 
+// Add PUT handler to match the frontend
+export async function PUT(request) {
+  return handleUpdate(request);
+}
+
+// Keep the PATCH handler for backward compatibility
 export async function PATCH(request) {
+  return handleUpdate(request);
+}
+
+// Common update function for both PUT and PATCH
+async function handleUpdate(request) {
   try {
     const session = await getServerSession(authOptions);
     
@@ -79,21 +90,37 @@ export async function PATCH(request) {
     
     // List of fields that can be updated
     const allowedFields = [
-      'firstName', 'lastName', 'phoneNumber', 'location'
+      'firstName', 'lastName', 'phoneNumber', 'location', 'profileImage', 'email'
     ];
     
     // Add role-specific allowed fields
     if (session.user.role === 'tradesperson') {
       allowedFields.push(
-        'businessName', 'skills', 'hourlyRate', 'description',
-        'availability', 'serviceArea'
+        'businessName', 'skills', 'yearsOfExperience', 'hourlyRate', 'description',
+        'availability', 'serviceArea', 'certifications', 'portfolio', 'insurance'
       );
+    } else if (session.user.role === 'customer') {
+      allowedFields.push('preferredContactMethod');
     }
     
-    // Update only allowed fields
+    // Update allowed fields
     for (const field of allowedFields) {
       if (data[field] !== undefined) {
-        user[field] = data[field];
+        // Handle nested objects properly
+        if (typeof data[field] === 'object' && data[field] !== null && !Array.isArray(data[field])) {
+          // For objects like location, availability, insurance
+          if (!user[field]) {
+            user[field] = {};
+          }
+          
+          // Update each property of the nested object
+          for (const subField in data[field]) {
+            user[field][subField] = data[field][subField];
+          }
+        } else {
+          // For simple fields or arrays
+          user[field] = data[field];
+        }
       }
     }
     

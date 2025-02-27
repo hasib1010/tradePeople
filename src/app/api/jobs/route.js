@@ -8,7 +8,7 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 export async function POST(request) {
   try {
     const session = await getServerSession(authOptions);
-    
+
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -20,8 +20,6 @@ export async function POST(request) {
     const data = await request.json();
     await connectToDatabase();
 
-    // Create default coordinates using a valid GeoJSON Point structure
-    // This is a placeholder - in production you should use geocoding service
     const defaultCoordinates = {
       type: "Point",
       coordinates: [0, 0] // [longitude, latitude]
@@ -48,7 +46,7 @@ export async function POST(request) {
         coordinates: data.coordinates || defaultCoordinates,
       },
       customer: session.user.id,
-      status: "open",
+      status: session.user.role === "admin" ? "open" : "draft", // Set as draft for customers
       timeline: {
         postedDate: new Date(),
         startDate: data.startDate ? new Date(data.startDate) : undefined,
@@ -61,12 +59,19 @@ export async function POST(request) {
       attachments: data.attachments || [],
       isUrgent: data.isUrgent || false,
       visibility: data.visibility || "public",
+      creditCost: session.user.role === "admin" ? 1 : undefined, // Default for admin direct posting
     });
 
     await newJob.save();
 
     return NextResponse.json(
-      { success: true, job: newJob, message: "Job created successfully" },
+      {
+        success: true,
+        job: newJob,
+        message: session.user.role === "customer"
+          ? "Job submitted for approval"
+          : "Job created successfully"
+      },
       { status: 201 }
     );
   } catch (error) {
@@ -77,6 +82,7 @@ export async function POST(request) {
     );
   }
 }
+
 
 export async function GET(request) {
   try {

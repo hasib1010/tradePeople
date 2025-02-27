@@ -1,23 +1,17 @@
 "use client"
-import { useState, useEffect, useContext } from "react";
+import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { redirect, useRouter } from "next/navigation";
 import Link from "next/link";
-import { AuthContext } from "@/context/AuthContext";
 
 export default function TradespersonDashboard() {
   const router = useRouter();
-
-console.log(useContext(AuthContext));
-
   const { data: session, status } = useSession({
     required: true,
     onUnauthenticated() {
       redirect("/login?callbackUrl=/dashboard/tradesperson");
     },
   });
-
-
 
   const [dashboardData, setDashboardData] = useState({
     availableJobs: 0,
@@ -30,57 +24,238 @@ console.log(useContext(AuthContext));
     credits: 0,
     recentActivity: [],
     loading: true,
-    error: null
+    error: null,
+    // Add job progress data
+    jobProgress: {
+      inProgress: 0,
+      completed: 0,
+      totalEarnings: 0,
+      currentJobs: []
+    }
+  });
+
+  // Separate loading states for different data types
+  const [loadingStates, setLoadingStates] = useState({
+    jobs: true,
+    applications: true,
+    profile: true,
+    activity: true,
+    jobProgress: true
   });
 
   useEffect(() => {
     const fetchDashboardData = async () => {
       if (status !== "authenticated") return;
 
+      // Fetch available jobs count (matching tradesperson skills)
+      fetchJobsData();
+      
+      // Fetch applications data
+      fetchApplicationsData();
+      
+      // Fetch user profile with credits info
+      fetchProfileData();
+      
+      // Fetch recent activity
+      fetchActivityData();
+      
+      // Fetch job progress data
+      fetchJobProgressData();
+    };
+
+    const fetchJobsData = async () => {
       try {
-        // Fetch available jobs count (matching tradesperson skills)
         const jobsResponse = await fetch('/api/jobs/matching');
+        if (!jobsResponse.ok) throw new Error("Failed to load matching jobs");
         const jobsData = await jobsResponse.json();
+        
+        setDashboardData(prev => ({
+          ...prev,
+          availableJobs: jobsData.count || 0
+        }));
+      } catch (error) {
+        console.error("Error fetching jobs data:", error);
+        setDashboardData(prev => ({
+          ...prev,
+          error: prev.error || "Failed to load some dashboard data"
+        }));
+      } finally {
+        setLoadingStates(prev => ({
+          ...prev,
+          jobs: false
+        }));
+      }
+    };
 
-        // Fetch applications data
+    const fetchApplicationsData = async () => {
+      try {
         const applicationsResponse = await fetch('/api/applications/stats');
+        if (!applicationsResponse.ok) throw new Error("Failed to load application stats");
         const applicationsData = await applicationsResponse.json();
-
-        // Fetch user profile with credits info
-        const profileResponse = await fetch('/api/profile');
-        const profileData = await profileResponse.json();
-
-        // Fetch recent activity
-        const activityResponse = await fetch('/api/activity');
-        const activityData = await activityResponse.json();
-
-        setDashboardData({
-          availableJobs: jobsData.count || 0,
+        
+        setDashboardData(prev => ({
+          ...prev,
           applications: {
             total: applicationsData.total || 0,
             pending: applicationsData.pending || 0,
             shortlisted: applicationsData.shortlisted || 0,
             accepted: applicationsData.accepted || 0
-          },
-          credits: profileData.user?.credits?.available || 0,
-          recentActivity: activityData.activities || [],
-          loading: false,
-          error: null
-        });
+          }
+        }));
       } catch (error) {
-        console.error("Error fetching dashboard data:", error);
+        console.error("Error fetching applications data:", error);
         setDashboardData(prev => ({
           ...prev,
-          loading: false,
-          error: "Failed to load dashboard data"
+          error: prev.error || "Failed to load some dashboard data"
+        }));
+      } finally {
+        setLoadingStates(prev => ({
+          ...prev,
+          applications: false
         }));
       }
+    };
+
+    const fetchProfileData = async () => {
+      try {
+        const profileResponse = await fetch('/api/profile');
+        if (!profileResponse.ok) throw new Error("Failed to load profile data");
+        const profileData = await profileResponse.json();
+        
+        setDashboardData(prev => ({
+          ...prev,
+          credits: profileData.user?.credits?.available || 0
+        }));
+      } catch (error) {
+        console.error("Error fetching profile data:", error);
+        setDashboardData(prev => ({
+          ...prev,
+          error: prev.error || "Failed to load some dashboard data"
+        }));
+      } finally {
+        setLoadingStates(prev => ({
+          ...prev,
+          profile: false
+        }));
+      }
+    };
+
+    const fetchActivityData = async () => {
+      try {
+        const activityResponse = await fetch('/api/activity');
+        if (!activityResponse.ok) throw new Error("Failed to load activity data");
+        const activityData = await activityResponse.json();
+        
+        setDashboardData(prev => ({
+          ...prev,
+          recentActivity: activityData.activities || []
+        }));
+      } catch (error) {
+        console.error("Error fetching activity data:", error);
+        setDashboardData(prev => ({
+          ...prev,
+          error: prev.error || "Failed to load some dashboard data"
+        }));
+      } finally {
+        setLoadingStates(prev => ({
+          ...prev,
+          activity: false
+        }));
+      }
+    };
+    
+    const fetchJobProgressData = async () => {
+      try {
+        // Fetch jobs where tradesperson is selected and status is in-progress or completed
+        const jobsResponse = await fetch('/api/jobs/tradesperson');
+        if (!jobsResponse.ok) throw new Error("Failed to load job progress data");
+        const jobsData = await jobsResponse.json();
+        
+        // Calculate totals and in-progress jobs
+        const inProgressJobs = jobsData.jobs.filter(job => job.status === 'in-progress');
+        const completedJobs = jobsData.jobs.filter(job => job.status === 'completed');
+        const totalEarnings = completedJobs.reduce((total, job) => 
+          total + (job.completionDetails?.finalAmount || 0), 0);
+        
+        setDashboardData(prev => ({
+          ...prev,
+          jobProgress: {
+            inProgress: inProgressJobs.length,
+            completed: completedJobs.length,
+            totalEarnings,
+            currentJobs: inProgressJobs.map(job => ({
+              id: job._id,
+              title: job.title,
+              customer: job.customer,
+              startDate: job.timeline?.startDate,
+              expectedEndDate: job.timeline?.endDate,
+              expectedDuration: job.timeline?.expectedDuration,
+              location: job.location,
+              status: job.status,
+              // Calculate progress based on timeline if available
+              progress: calculateJobProgress(job)
+            }))
+          }
+        }));
+      } catch (error) {
+        console.error("Error fetching job progress data:", error);
+        setDashboardData(prev => ({
+          ...prev,
+          error: prev.error || "Failed to load some dashboard data"
+        }));
+      } finally {
+        setLoadingStates(prev => ({
+          ...prev,
+          jobProgress: false
+        }));
+      }
+    };
+    
+    // Helper function to calculate job progress percentage
+    const calculateJobProgress = (job) => {
+      if (job.status === 'completed') return 100;
+      if (job.status !== 'in-progress') return 0;
+      
+      // If the job has a start and end date, calculate progress based on timeline
+      if (job.timeline?.startDate && job.timeline?.endDate) {
+        const startDate = new Date(job.timeline.startDate);
+        const endDate = new Date(job.timeline.endDate);
+        const currentDate = new Date();
+        
+        // If job hasn't started yet
+        if (currentDate < startDate) return 0;
+        
+        // If job is past due date but not completed
+        if (currentDate > endDate) return 90; // Cap at 90% if overdue
+        
+        // Calculate percentage based on timeline
+        const totalDuration = endDate - startDate;
+        const elapsedDuration = currentDate - startDate;
+        const progressPercentage = Math.round((elapsedDuration / totalDuration) * 100);
+        
+        return Math.min(progressPercentage, 90); // Cap at 90% for in-progress jobs
+      }
+      
+      // Default value if no timeline data available
+      return 50;
     };
 
     if (status === "authenticated") {
       fetchDashboardData();
     }
   }, [status]);
+
+  // Update overall loading state when all individual loading states are false
+  useEffect(() => {
+    if (!loadingStates.jobs && !loadingStates.applications && 
+        !loadingStates.profile && !loadingStates.activity && 
+        !loadingStates.jobProgress) {
+      setDashboardData(prev => ({
+        ...prev,
+        loading: false
+      }));
+    }
+  }, [loadingStates]);
 
   if (status === "loading" || dashboardData.loading) {
     return (
@@ -90,13 +265,46 @@ console.log(useContext(AuthContext));
     );
   }
 
+  // Format date helper function
+  const formatDate = (dateString) => {
+    if (!dateString) return '';
+    
+    const date = new Date(dateString);
+    return new Intl.DateTimeFormat('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    }).format(date);
+  };
+  
+  // Format number as currency
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
+    }).format(amount);
+  };
+
+  // Calculate other applications (those not in pending, shortlisted, or accepted state)
+  const otherApplications = Math.max(
+    0,
+    dashboardData.applications.total -
+      (dashboardData.applications.pending +
+        dashboardData.applications.shortlisted +
+        dashboardData.applications.accepted)
+  );
+
   return (
     <div className="bg-gray-50 min-h-screen">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
           <p className="mt-1 text-sm text-gray-500">
-            Welcome back, {session.user.firstName || session.user.name}! Here's what's happening with your account.
+            Welcome back, {session?.user?.firstName || session?.user?.name || 'Tradesperson'}! Here's what's happening with your account.
           </p>
         </div>
 
@@ -110,6 +318,123 @@ console.log(useContext(AuthContext));
               </div>
               <div className="ml-3">
                 <p className="text-sm text-red-700">{dashboardData.error}</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Jobs Summary Stats */}
+        <div className="mb-8 bg-white shadow overflow-hidden sm:rounded-lg">
+          <div className="px-4 py-5 sm:px-6 border-b border-gray-200">
+            <h3 className="text-lg leading-6 font-medium text-gray-900">
+              Job Summary
+            </h3>
+            <p className="mt-1 max-w-2xl text-sm text-gray-500">
+              Overview of your current and completed jobs
+            </p>
+          </div>
+          <div className="px-4 py-5 sm:p-6">
+            {loadingStates.jobProgress ? (
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
+                {[...Array(3)].map((_, index) => (
+                  <div key={index} className="text-center">
+                    <div className="h-8 w-20 mx-auto bg-gray-200 animate-pulse rounded mb-2"></div>
+                    <div className="h-4 w-16 mx-auto bg-gray-200 animate-pulse rounded"></div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-blue-600">
+                    {dashboardData.jobProgress.inProgress}
+                  </div>
+                  <div className="text-sm text-gray-500">Jobs In Progress</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-green-600">
+                    {dashboardData.jobProgress.completed}
+                  </div>
+                  <div className="text-sm text-gray-500">Jobs Completed</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-purple-600">
+                    {formatCurrency(dashboardData.jobProgress.totalEarnings)}
+                  </div>
+                  <div className="text-sm text-gray-500">Total Earnings</div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Current Jobs with Progress */}
+        {!loadingStates.jobProgress && dashboardData.jobProgress.currentJobs.length > 0 && (
+          <div className="mb-8 bg-white shadow overflow-hidden sm:rounded-lg">
+            <div className="px-4 py-5 sm:px-6 border-b border-gray-200">
+              <h3 className="text-lg leading-6 font-medium text-gray-900">
+                Current Jobs
+              </h3>
+              <p className="mt-1 max-w-2xl text-sm text-gray-500">
+                Your in-progress jobs and their completion status
+              </p>
+            </div>
+            <div className="divide-y divide-gray-200">
+              {dashboardData.jobProgress.currentJobs.map((job) => (
+                <div key={job.id} className="px-4 py-5 sm:px-6">
+                  <div className="flex flex-col md:flex-row md:items-center md:justify-between">
+                    <div className="mb-4 md:mb-0">
+                      <h4 className="text-base font-medium text-gray-900">{job.title}</h4>
+                      <div className="mt-1 flex items-center text-sm text-gray-500">
+                        <svg className="flex-shrink-0 mr-1.5 h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                          <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
+                        </svg>
+                        {job.location?.city}, {job.location?.state}
+                      </div>
+                      <div className="mt-1 flex items-center text-sm text-gray-500">
+                        <svg className="flex-shrink-0 mr-1.5 h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                          <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd" />
+                        </svg>
+                        Due by: {formatDate(job.expectedEndDate || new Date())}
+                      </div>
+                    </div>
+                    <div className="flex flex-col items-end">
+                      <div className="w-full md:w-48 mb-2">
+                        <div className="flex items-center justify-between text-sm mb-1">
+                          <span className="font-medium">{job.progress}% Complete</span>
+                          <span className={job.progress >= 90 ? "text-red-600" : "text-gray-600"}>
+                            {job.progress >= 90 && job.progress < 100 ? "Due soon" : ""}
+                          </span>
+                        </div>
+                        <div className="overflow-hidden h-2 text-xs flex rounded bg-gray-200">
+                          <div 
+                            style={{ width: `${job.progress}%` }} 
+                            className={`shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center 
+                              ${job.progress < 30 ? 'bg-red-500' : 
+                                job.progress < 70 ? 'bg-yellow-500' : 
+                                'bg-green-500'}`}>
+                          </div>
+                        </div>
+                      </div>
+                      <Link
+                        href={`/jobs/${job.id}`}
+                        className="inline-flex items-center px-2.5 py-1.5 border border-transparent text-xs font-medium rounded text-blue-700 bg-blue-100 hover:bg-blue-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                      >
+                        View Details
+                      </Link>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="bg-gray-50 px-4 py-4 sm:px-6">
+              <div className="flex justify-center">
+                <Link
+                  href="/jobs/active"
+                  className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                >
+                  View All Active Jobs
+                </Link>
               </div>
             </div>
           </div>
@@ -131,7 +456,13 @@ console.log(useContext(AuthContext));
                       Available Jobs
                     </dt>
                     <dd>
-                      <div className="text-lg font-medium text-gray-900">{dashboardData.availableJobs}</div>
+                      <div className="text-lg font-medium text-gray-900">
+                        {loadingStates.jobs ? (
+                          <span className="inline-block w-10 h-6 bg-gray-200 animate-pulse rounded"></span>
+                        ) : (
+                          dashboardData.availableJobs
+                        )}
+                      </div>
                     </dd>
                   </dl>
                 </div>
@@ -160,7 +491,13 @@ console.log(useContext(AuthContext));
                       Your Applications
                     </dt>
                     <dd>
-                      <div className="text-lg font-medium text-gray-900">{dashboardData.applications.total}</div>
+                      <div className="text-lg font-medium text-gray-900">
+                        {loadingStates.applications ? (
+                          <span className="inline-block w-10 h-6 bg-gray-200 animate-pulse rounded"></span>
+                        ) : (
+                          dashboardData.applications.total
+                        )}
+                      </div>
                     </dd>
                   </dl>
                 </div>
@@ -189,7 +526,13 @@ console.log(useContext(AuthContext));
                       Available Credits
                     </dt>
                     <dd>
-                      <div className="text-lg font-medium text-gray-900">{dashboardData.credits}</div>
+                      <div className="text-lg font-medium text-gray-900">
+                        {loadingStates.profile ? (
+                          <span className="inline-block w-10 h-6 bg-gray-200 animate-pulse rounded"></span>
+                        ) : (
+                          dashboardData.credits
+                        )}
+                      </div>
                     </dd>
                   </dl>
                 </div>
@@ -216,35 +559,43 @@ console.log(useContext(AuthContext));
             </p>
           </div>
           <div className="px-4 py-5 sm:p-6">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="text-center">
-                <div className="text-2xl font-bold text-yellow-500">
-                  {dashboardData.applications.pending}
-                </div>
-                <div className="text-sm text-gray-500">Pending</div>
+            {loadingStates.applications ? (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {[...Array(4)].map((_, index) => (
+                  <div key={index} className="text-center">
+                    <div className="h-8 w-20 mx-auto bg-gray-200 animate-pulse rounded mb-2"></div>
+                    <div className="h-4 w-16 mx-auto bg-gray-200 animate-pulse rounded"></div>
+                  </div>
+                ))}
               </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-blue-500">
-                  {dashboardData.applications.shortlisted}
+            ) : (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-yellow-500">
+                    {dashboardData.applications.pending}
+                  </div>
+                  <div className="text-sm text-gray-500">Pending</div>
                 </div>
-                <div className="text-sm text-gray-500">Shortlisted</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-green-500">
-                  {dashboardData.applications.accepted}
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-blue-500">
+                    {dashboardData.applications.shortlisted}
+                  </div>
+                  <div className="text-sm text-gray-500">Shortlisted</div>
                 </div>
-                <div className="text-sm text-gray-500">Accepted</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-gray-500">
-                  {dashboardData.applications.total -
-                    (dashboardData.applications.pending +
-                      dashboardData.applications.shortlisted +
-                      dashboardData.applications.accepted)}
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-green-500">
+                    {dashboardData.applications.accepted}
+                  </div>
+                  <div className="text-sm text-gray-500">Accepted</div>
                 </div>
-                <div className="text-sm text-gray-500">Other</div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-gray-500">
+                    {otherApplications}
+                  </div>
+                  <div className="text-sm text-gray-500">Other</div>
+                </div>
               </div>
-            </div>
+            )}
           </div>
         </div>
 
@@ -259,14 +610,27 @@ console.log(useContext(AuthContext));
                 Your latest activities and updates
               </p>
             </div>
-            {dashboardData.recentActivity.length > 0 && (
+            {!loadingStates.activity && dashboardData.recentActivity.length > 0 && (
               <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                 {dashboardData.recentActivity.length} updates
               </span>
             )}
           </div>
           <div className="bg-white overflow-hidden">
-            {dashboardData.recentActivity.length === 0 ? (
+            {loadingStates.activity ? (
+              <div className="px-4 py-6">
+                {[...Array(3)].map((_, index) => (
+                  <div key={index} className="flex space-x-3 mb-6">
+                    <div className="h-8 w-8 rounded-full bg-gray-200 animate-pulse"></div>
+                    <div className="flex-1">
+                      <div className="h-4 w-24 bg-gray-200 animate-pulse rounded mb-2"></div>
+                      <div className="h-6 w-full bg-gray-200 animate-pulse rounded mb-1"></div>
+                      <div className="h-4 w-40 bg-gray-200 animate-pulse rounded"></div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : dashboardData.recentActivity.length === 0 ? (
               <div className="px-4 py-12 text-center">
                 <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -276,7 +640,7 @@ console.log(useContext(AuthContext));
               </div>
             ) : (
               <div className="flow-root px-4 py-2">
-                <ul className="-mb-8 max-h-96 overflow-scroll">
+                <ul className="-mb-8 max-h-96 overflow-y-auto">
                   {dashboardData.recentActivity.map((activity, index) => (
                     <li key={activity.id || index}>
                       <div className="relative pb-8">
@@ -285,14 +649,15 @@ console.log(useContext(AuthContext));
                         ) : null}
                         <div className="relative flex space-x-3">
                           <div>
-                            <span className={`h-8 w-8 rounded-full flex items-center justify-center ring-8 ring-white ${activity.type === 'application' ? 'bg-blue-500' :
+                            <span className={`h-8 w-8 rounded-full flex items-center justify-center ring-8 ring-white ${
+                              activity.type === 'application' ? 'bg-blue-500' :
                               activity.type === 'job' ? 'bg-green-500' :
-                                activity.type === 'message' ? 'bg-yellow-500' :
-                                  activity.type === 'credit' ? 'bg-purple-500' :
-                                    activity.type === 'subscription' ? 'bg-indigo-500' :
-                                      activity.type === 'payment' ? 'bg-emerald-500' :
-                                        'bg-gray-500'
-                              }`}>
+                              activity.type === 'message' ? 'bg-yellow-500' :
+                              activity.type === 'credit' ? 'bg-purple-500' :
+                              activity.type === 'subscription' ? 'bg-indigo-500' :
+                              activity.type === 'payment' ? 'bg-emerald-500' :
+                              'bg-gray-500'
+                            }`}>
                               {activity.type === 'application' && (
                                 <svg className="h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
                                   <path fillRule="evenodd" d="M9 3a1 1 0 012 0v5.5a.5.5 0 001 0V4a1 1 0 112 0v4.5a.5.5 0 001 0V6a1 1 0 112 0v5a7 7 0 11-14 0V9a1 1 0 012 0v2.5a.5.5 0 001 0V4a1 1 0 012 0v4.5a.5.5 0 001 0V3z" clipRule="evenodd" />
@@ -330,37 +695,40 @@ console.log(useContext(AuthContext));
                           </div>
                           <div className="min-w-0 flex-1">
                             <div className="text-sm text-gray-500 mb-0.5">
-                              {new Date(activity.date).toLocaleDateString()} · {new Date(activity.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                              {formatDate(activity.date)}
                             </div>
                             <div className="flex flex-col sm:flex-row sm:justify-between">
                               <p className="text-sm font-medium text-gray-900">{activity.description}</p>
 
                               {/* Status badges for different activity types */}
                               {activity.status && activity.type === 'application' && (
-                                <span className={`mt-1 sm:mt-0 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${activity.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                                <span className={`mt-1 sm:mt-0 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                  activity.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
                                   activity.status === 'shortlisted' ? 'bg-blue-100 text-blue-800' :
-                                    activity.status === 'accepted' ? 'bg-green-100 text-green-800' :
-                                      activity.status === 'rejected' ? 'bg-red-100 text-red-800' :
-                                        'bg-gray-100 text-gray-800'
-                                  }`}>
+                                  activity.status === 'accepted' ? 'bg-green-100 text-green-800' :
+                                  activity.status === 'rejected' ? 'bg-red-100 text-red-800' :
+                                  'bg-gray-100 text-gray-800'
+                                }`}>
                                   {activity.status.charAt(0).toUpperCase() + activity.status.slice(1)}
                                 </span>
                               )}
 
                               {/* Amount display for credit and payment activities */}
-                              {(activity.type === 'credit' || activity.type === 'payment') && activity.amount && (
-                                <span className={`mt-1 sm:mt-0 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${activity.amount > 0 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                                  }`}>
+                              {(activity.type === 'credit' || activity.type === 'payment') && activity.amount !== undefined && (
+                                <span className={`mt-1 sm:mt-0 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                  activity.amount > 0 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                                }`}>
                                   {activity.amount > 0 ? '+' : ''}{activity.amount} {activity.type === 'payment' ? '$' : 'credits'}
                                 </span>
                               )}
 
                               {/* Subscription status badges */}
                               {activity.type === 'subscription' && activity.status && (
-                                <span className={`mt-1 sm:mt-0 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${activity.status === 'active' ? 'bg-green-100 text-green-800' :
+                                <span className={`mt-1 sm:mt-0 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                  activity.status === 'active' ? 'bg-green-100 text-green-800' :
                                   activity.status === 'canceled' ? 'bg-red-100 text-red-800' :
-                                    'bg-yellow-100 text-yellow-800'
-                                  }`}>
+                                  'bg-yellow-100 text-yellow-800'
+                                }`}>
                                   {activity.status.charAt(0).toUpperCase() + activity.status.slice(1)}
                                 </span>
                               )}
@@ -371,9 +739,9 @@ console.log(useContext(AuthContext));
                               <div className="mt-2">
                                 <a href={activity.link} className="text-sm text-blue-600 hover:text-blue-500">
                                   {activity.type === 'application' ? 'View application' :
-                                    activity.type === 'job' ? 'View job details' :
-                                      activity.type === 'message' ? 'Read message' :
-                                        'View details'}
+                                   activity.type === 'job' ? 'View job details' :
+                                   activity.type === 'message' ? 'Read message' :
+                                   'View details'}
                                 </a>
                               </div>
                             )}
@@ -385,7 +753,6 @@ console.log(useContext(AuthContext));
                 </ul>
               </div>
             )}
-
           </div>
         </div>
 

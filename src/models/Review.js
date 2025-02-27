@@ -1,238 +1,112 @@
-// models/Review.js
+// src/models/Review.js
 import mongoose from 'mongoose';
 
 const reviewSchema = new mongoose.Schema({
   job: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Job',
-    required: [true, 'Job reference is required'],
+    required: true
+  },
+  tradesperson: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true
   },
   reviewer: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
-    required: [true, 'Reviewer is required'],
-  },
-  reviewee: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: [true, 'Reviewee is required'],
+    required: true
   },
   rating: {
     type: Number,
-    required: [true, 'Rating is required'],
-    min: [1, 'Rating must be at least 1'],
-    max: [5, 'Rating cannot exceed 5'],
+    required: true,
+    min: 1,
+    max: 5
   },
-  comment: {
+  title: {
     type: String,
-    required: [true, 'Review comment is required'],
-    minlength: [10, 'Comment must be at least 10 characters'],
-    maxlength: [1000, 'Comment cannot exceed 1000 characters'],
+    required: true,
+    trim: true
   },
-  images: [String],
-  attributes: {
-    punctuality: {
-      type: Number,
-      min: 1,
-      max: 5,
-    },
-    professionalism: {
-      type: Number,
-      min: 1,
-      max: 5,
-    },
+  content: {
+    type: String,
+    required: true
+  },
+  categories: {
     workQuality: {
       type: Number,
-      min: 1,
-      max: 5,
+      min: 0,
+      max: 5
     },
     communication: {
       type: Number,
-      min: 1,
-      max: 5,
+      min: 0,
+      max: 5
+    },
+    punctuality: {
+      type: Number,
+      min: 0,
+      max: 5
     },
     valueForMoney: {
       type: Number,
-      min: 1,
-      max: 5,
-    },
+      min: 0,
+      max: 5
+    }
   },
-  isVerified: {
-    type: Boolean,
-    default: true,
-  },
-  isPublic: {
-    type: Boolean,
-    default: true,
+  recommendationLikelihood: {
+    type: Number,
+    min: 0,
+    max: 5
   },
   status: {
     type: String,
-    enum: ['pending', 'published', 'flagged', 'removed'],
-    default: 'published',
+    enum: ['pending', 'published', 'rejected', 'flagged'],
+    default: 'published'
   },
-  response: {
-    comment: String,
-    date: Date,
+  adminReviewed: {
+    type: Boolean,
+    default: false
+  },
+  tradespersonResponse: {
+    content: String,
+    submittedAt: Date
   },
   flags: [{
     reason: {
       type: String,
-      enum: ['inappropriate', 'spam', 'false_information', 'other'],
+      enum: ['inappropriate', 'spam', 'fake', 'other']
     },
     description: String,
     flaggedBy: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
+      ref: 'User'
     },
     flaggedAt: {
       type: Date,
-      default: Date.now,
+      default: Date.now
     },
     status: {
       type: String,
-      enum: ['pending', 'reviewed', 'accepted', 'rejected'],
-      default: 'pending',
-    },
+      enum: ['pending', 'resolved', 'dismissed'],
+      default: 'pending'
+    }
   }],
-  helpfulVotes: {
-    count: {
-      type: Number,
-      default: 0,
-    },
-    users: [{
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
-    }],
+  createdAt: {
+    type: Date,
+    default: Date.now
   },
-  unhelpfulVotes: {
-    count: {
-      type: Number,
-      default: 0,
-    },
-    users: [{
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
-    }],
-  },
-}, {
-  timestamps: true,
+  updatedAt: {
+    type: Date,
+    default: Date.now
+  }
 });
 
-// Indexes for efficient querying
-reviewSchema.index({ reviewee: 1, createdAt: -1 });
-reviewSchema.index({ job: 1 });
-reviewSchema.index({ reviewer: 1 });
-reviewSchema.index({ rating: -1 });
-reviewSchema.index({ status: 1 });
-
-// Middleware to prevent duplicate reviews
-reviewSchema.pre('save', async function(next) {
-  if (this.isNew) {
-    const existingReview = await this.constructor.findOne({
-      job: this.job,
-      reviewer: this.reviewer,
-      reviewee: this.reviewee,
-    });
-    
-    if (existingReview) {
-      const error = new Error('A review for this job already exists');
-      error.statusCode = 400;
-      return next(error);
-    }
-  }
-  next();
-});
-
-// Calculate average attribute ratings
-reviewSchema.pre('save', function(next) {
-  const attrs = this.attributes;
-  let sum = 0;
-  let count = 0;
-  
-  for (const key in attrs) {
-    if (attrs[key]) {
-      sum += attrs[key];
-      count++;
-    }
-  }
-  
-  // If attributes are provided, use their average as the main rating
-  // if not specified explicitly
-  if (count > 0 && !this.rating) {
-    this.rating = Math.round((sum / count) * 10) / 10;
-  }
-  
-  next();
-});
-
-// Static method to get average rating for a user
-reviewSchema.statics.getAverageRatingForUser = async function(userId) {
-  const result = await this.aggregate([
-    { $match: { reviewee: mongoose.Types.ObjectId(userId), status: 'published' } },
-    { $group: {
-        _id: '$reviewee',
-        averageRating: { $avg: '$rating' },
-        totalReviews: { $sum: 1 },
-        ratings: {
-          $push: {
-            rating: '$rating',
-            jobId: '$job',
-            comment: '$comment',
-            createdAt: '$createdAt'
-          }
-        }
-      }
-    }
-  ]);
-  
-  return result[0] || { averageRating: 0, totalReviews: 0, ratings: [] };
-};
-
-// Method to vote on review helpfulness
-reviewSchema.methods.vote = async function(userId, isHelpful) {
-  // Remove user from both arrays first to prevent duplicate votes
-  this.helpfulVotes.users = this.helpfulVotes.users.filter(
-    id => id.toString() !== userId.toString()
-  );
-  this.unhelpfulVotes.users = this.unhelpfulVotes.users.filter(
-    id => id.toString() !== userId.toString()
-  );
-  
-  // Add user to appropriate array
-  if (isHelpful) {
-    this.helpfulVotes.users.push(userId);
-  } else {
-    this.unhelpfulVotes.users.push(userId);
-  }
-  
-  // Update counts
-  this.helpfulVotes.count = this.helpfulVotes.users.length;
-  this.unhelpfulVotes.count = this.unhelpfulVotes.users.length;
-  
-  return this.save();
-};
-
-// Method to add a response to a review
-reviewSchema.methods.addResponse = async function(responseText) {
-  this.response = {
-    comment: responseText,
-    date: new Date()
-  };
-  
-  return this.save();
-};
-
-// Method to flag a review
-reviewSchema.methods.flagReview = async function(flagData) {
-  this.flags.push(flagData);
-  
-  // If there are multiple flags, consider changing status
-  if (this.flags.length >= 3) {
-    this.status = 'flagged';
-  }
-  
-  return this.save();
-};
+// Indexing for efficient querying
+reviewSchema.index({ tradesperson: 1, status: 1 });
+reviewSchema.index({ job: 1, reviewer: 1 }, { unique: true });
+reviewSchema.index({ createdAt: -1 });
+reviewSchema.index({ rating: 1 });
 
 const Review = mongoose.models.Review || mongoose.model('Review', reviewSchema);
 

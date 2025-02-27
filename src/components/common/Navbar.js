@@ -104,7 +104,6 @@ export default function Navbar() {
       switch (userRole) {
         case "admin":
           return [
-            
             {
               href: "/dashboard/admin",
               label: "Dashboard",
@@ -116,9 +115,9 @@ export default function Navbar() {
               isActive: pathname.includes("/admin/users")
             },
             {
-              href: "/admin/jobs",
+              href: "/admin/jobs/manage",
               label: "Manage Jobs",
-              isActive: pathname.includes("/admin/jobs")
+              isActive: pathname.includes("/admin/jobs/manage")
             },
             {
               href: "/admin/verifications",
@@ -128,7 +127,7 @@ export default function Navbar() {
           ];
         case "tradesperson":
           return [
-           
+
             {
               href: "/jobs",
               label: "Find Jobs",
@@ -153,7 +152,7 @@ export default function Navbar() {
           ];
         case "customer":
           return [
-           
+
             {
               href: "/tradespeople",
               label: "Find Tradespeople",
@@ -317,10 +316,10 @@ export default function Navbar() {
                         {unreadMessages > 99 ? '99+' : unreadMessages}
                       </span>
                     )}
-                    {session.user.image ? (
+                    {session.user.profileImage || session.user.image ? (
                       <Image
-                        className="h-10 w-10 object-cover  rounded-full"
-                        src={session.user.image}
+                        className="h-10 w-10 object-cover rounded-full"
+                        src={session.user.profileImage || session.user.image}
                         alt={session.user.name || "User profile"}
                         width={32}
                         height={32}
@@ -490,19 +489,19 @@ export default function Navbar() {
             {!isAuthenticated && (
               <div className="pt-4 pb-3 border-t border-gray-200">
                 <div className="space-y-2 px-3">
-                <Link
-                  href="/login"
-                  className="block text-center border border-pink-600 hover:text-pink-600 px-6 py-2 rounded-md transition-all bg-pink-600 hover:bg-transparent text-white"
-                >
-                  Sign in
-                </Link>
+                  <Link
+                    href="/login"
+                    className="block text-center border border-pink-600 hover:text-pink-600 px-6 py-2 rounded-md transition-all bg-pink-600 hover:bg-transparent text-white"
+                  >
+                    Sign in
+                  </Link>
 
-                <Link
-                  href="/register"
-                  className="lg:ml-4 block text-center border border-green-600 text-green-600 px-6 py-2 rounded-md transition-all hover:bg-green-600 hover:text-white"
-                >
-                  Sign up
-                </Link>
+                  <Link
+                    href="/register"
+                    className="lg:ml-4 block text-center border border-green-600 text-green-600 px-6 py-2 rounded-md transition-all hover:bg-green-600 hover:text-white"
+                  >
+                    Sign up
+                  </Link>
                 </div>
               </div>
             )}

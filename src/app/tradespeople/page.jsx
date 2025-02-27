@@ -15,6 +15,7 @@ export default function TradespeopleDirectory() {
     const [error, setError] = useState(null);
     const [favorites, setFavorites] = useState([]);
 
+    
     // Filter states
     const [filters, setFilters] = useState({
         search: searchParams.get('search') || '',
@@ -27,6 +28,7 @@ export default function TradespeopleDirectory() {
     });
 
     const [showFilters, setShowFilters] = useState(false);
+    const [expandedReviews, setExpandedReviews] = useState({});
 
     // Skills options based on your model
     const skillOptions = [
@@ -161,6 +163,24 @@ export default function TradespeopleDirectory() {
         } catch (err) {
             console.error('Error updating favorite:', err);
         }
+    };
+
+    const toggleReviewExpansion = (tradespersonId) => {
+        setExpandedReviews(prev => ({
+            ...prev,
+            [tradespersonId]: !prev[tradespersonId]
+        }));
+    };
+
+    // Format date helper
+    const formatDate = (dateString) => {
+        if (!dateString) return '';
+        const date = new Date(dateString);
+        return date.toLocaleDateString('en-US', { 
+            year: 'numeric', 
+            month: 'short', 
+            day: 'numeric' 
+        });
     };
 
     if (loading) {
@@ -411,28 +431,42 @@ export default function TradespeopleDirectory() {
                                             {person.businessName && (
                                                 <p className="text-sm text-gray-500">{person.businessName}</p>
                                             )}
-                                            <div className="mt-1 flex items-center">
-                                                <div className="flex items-center">
-                                                    {[0, 1, 2, 3, 4].map((rating) => (
-                                                        <svg
-                                                            key={rating}
-                                                            className={`h-4 w-4 ${rating < Math.floor(person.averageRating)
-                                                                ? 'text-yellow-400'
-                                                                : rating < person.averageRating
-                                                                    ? 'text-yellow-300'
-                                                                    : 'text-gray-300'
-                                                                }`}
-                                                            fill="currentColor"
-                                                            viewBox="0 0 20 20"
-                                                        >
-                                                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                                                        </svg>
-                                                    ))}
-                                                </div>
-                                                <span className="ml-1 text-sm text-gray-500">
-                                                    {person.averageRating.toFixed(1)} ({person.totalReviews} reviews)
-                                                </span>
-                                            </div>
+                                           <div className="mt-1 flex items-center">
+    <div className="flex items-center">
+        {[0, 1, 2, 3, 4].map((rating) => {
+            // Calculate effective rating from reviews if averageRating is 0
+            const effectiveRating = person.averageRating || 
+                (person.reviews?.length > 0 
+                    ? person.reviews.reduce((sum, r) => sum + r.rating, 0) / person.reviews.length 
+                    : 0);
+            
+            return (
+                <svg
+                    key={rating}
+                    className={`h-4 w-4 ${
+                        rating < Math.floor(effectiveRating)
+                            ? 'text-yellow-400'
+                            : rating < effectiveRating
+                                ? 'text-yellow-300'
+                                : 'text-gray-300'
+                    }`}
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                >
+                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                </svg>
+            );
+        })}
+    </div>
+    <span className="ml-1 text-sm text-gray-500">
+        {/* Calculate average from reviews array if averageRating is 0 */}
+        {(person.averageRating || 
+          (person.reviews?.length > 0 
+            ? (person.reviews.reduce((sum, r) => sum + r.rating, 0) / person.reviews.length).toFixed(1) 
+            : '0.0'))} 
+        ({person.totalReviews || person.reviews?.length || 0} review{(person.totalReviews || person.reviews?.length) !== 1 ? 's' : ''})
+    </span>
+</div>
                                         </div>
                                         {session?.user?.role === 'customer' && (
                                             <button
@@ -512,6 +546,72 @@ export default function TradespeopleDirectory() {
                                             )}
                                         </div>
                                     </div>
+                                    
+                                    {/* Reviews Section */}
+                                    {person.reviews && person.reviews.length > 0 && (
+                                        <div className="mt-4">
+                                            <div className="flex justify-between items-center mb-2">
+                                                <h4 className="text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                    Recent Reviews
+                                                </h4>
+                                                <button
+                                                    onClick={() => toggleReviewExpansion(person._id)}
+                                                    className="text-xs text-green-600 hover:text-green-500 focus:outline-none"
+                                                >
+                                                    {expandedReviews[person._id] ? 'Show Less' : 'Show All'}
+                                                </button>
+                                            </div>
+                                            
+                                            <div className="space-y-3">
+                                                {(expandedReviews[person._id] ? person.reviews : person.reviews.slice(0, 1)).map((review) => (
+                                                    <div key={review._id} className="bg-gray-50 rounded-md p-3">
+                                                        <div className="flex items-center mb-2">
+                                                            <div className="flex-shrink-0 h-8 w-8">
+                                                                <img
+                                                                    className="h-8 w-8 rounded-full object-cover"
+                                                                    src={review.reviewer?.profileImage || 'https://i.ibb.co.com/HfL0Fr7P/default-profile.jpg'}
+                                                                    alt={`${review.reviewer?.firstName || 'Anonymous'} ${review.reviewer?.lastName || 'User'}`}
+                                                                />
+                                                            </div>
+                                                            <div className="ml-2 flex-1">
+                                                                <p className="text-xs font-medium text-gray-900">
+                                                                    {review.reviewer?.firstName || 'Anonymous'} {review.reviewer?.lastName || 'User'}
+                                                                </p>
+                                                                <div className="flex items-center">
+                                                                    <div className="flex items-center">
+                                                                        {[0, 1, 2, 3, 4].map((rating) => (
+                                                                            <svg
+                                                                                key={rating}
+                                                                                className={`h-3 w-3 ${rating < review.rating ? 'text-yellow-400' : 'text-gray-300'}`}
+                                                                                fill="currentColor"
+                                                                                viewBox="0 0 20 20"
+                                                                            >
+                                                                                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                                                                            </svg>
+                                                                        ))}
+                                                                    </div>
+                                                                    <span className="ml-2 text-xs text-gray-500">
+                                                                        {formatDate(review.createdAt)}
+                                                                    </span>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <h5 className="text-sm font-medium text-gray-900">{review.title}</h5>
+                                                        <p className="text-xs text-gray-600 mt-1 line-clamp-2">{review.content}</p>
+                                                    </div>
+                                                ))}
+                                                
+                                                {!expandedReviews[person._id] && person.reviews.length > 1 && (
+                                                    <button 
+                                                        onClick={() => toggleReviewExpansion(person._id)}
+                                                        className="w-full text-center text-xs text-green-600 hover:text-green-500 py-1 border border-dashed border-gray-200 rounded-md focus:outline-none"
+                                                    >
+                                                        View {person.reviews.length > 2 ? `all ${person.totalReviews}` : 'more'} reviews
+                                                    </button>
+                                                )}
+                                            </div>
+                                        </div>
+                                    )}
 
                                     <div className="mt-4 flex justify-between items-center">
                                         <div>

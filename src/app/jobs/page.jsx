@@ -36,7 +36,7 @@ export default function JobsPage() {
   const fetchJobs = async () => {
     setLoading(true);
     try {
-      // Build query params
+    
       const params = new URLSearchParams();
       if (filters.category && filters.category !== 'All Categories') {
         params.append('category', filters.category);

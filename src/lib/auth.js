@@ -52,15 +52,24 @@ export const authOptions = {
       if (user) {
         token.id = user.id;
         token.role = user.role;
-        token.profilePicture = user.profilePicture;
+        token.profileImage = user.profilePicture; // Change to profileImage
         token.isVerified = user.isVerified;
       }
       
       // Handle update when session is modified
       if (trigger === "update" && session?.user) {
-        // Only update fields that were changed
+        // Update profile image if provided
+        if (session.user.profileImage) {
+          token.profileImage = session.user.profileImage;
+        }
+  
         if (session.user.isVerified !== undefined) {
           token.isVerified = session.user.isVerified;
+        }
+  
+        // Update first and last name if provided
+        if (session.user.firstName || session.user.lastName) {
+          token.name = `${session.user.firstName || ''} ${session.user.lastName || ''}`.trim();
         }
       }
       
@@ -70,8 +79,9 @@ export const authOptions = {
       if (token) {
         session.user.id = token.id;
         session.user.role = token.role;
-        session.user.profilePicture = token.profilePicture;
+        session.user.profileImage = token.profileImage; // Change to profileImage
         session.user.isVerified = token.isVerified;
+        session.user.name = token.name;
       }
       return session;
     }
