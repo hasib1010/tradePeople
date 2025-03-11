@@ -39,31 +39,35 @@ export default function ProfilePage() {
     const weekdays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
     useEffect(() => {
-        const fetchProfileData = async () => {
-            if (status !== "authenticated") return;
-
-            try {
-                const response = await fetch('/api/profile');
-
-                if (!response.ok) {
-                    throw new Error("Failed to load profile data");
-                }
-
-                const data = await response.json();
-                setProfileData(data.user || {});
-                setFormData(data.user || {});
-            } catch (error) {
-                console.error("Error fetching profile data:", error);
-                setError("Failed to load profile data. Please try again later.");
-            } finally {
-                setLoading(false);
-            }
-        };
-
         if (status === "authenticated") {
+            if (session?.user?.role !== "tradesperson") {
+                // Redirect non-tradespeople (customers or admins) to a different page
+                router.push(session.user.role === "customer" ? "/profile/customer" : "/dashboard");
+                return;
+            }
+
+            const fetchProfileData = async () => {
+                try {
+                    const response = await fetch('/api/profile');
+                    if (!response.ok) {
+                        throw new Error("Failed to load profile data");
+                    }
+                    const data = await response.json();
+                    setProfileData(data.user || {});
+                    setFormData(data.user || {});
+                } catch (error) {
+                    console.error("Error fetching profile data:", error);
+                    setError("Failed to load profile data. Please try again later.");
+                } finally {
+                    setLoading(false);
+                }
+            };
+
             fetchProfileData();
         }
-    }, [status]);
+    }, [status, session, router]);
+
+     
 
     const handleInputChange = (e) => {
         const { name, value } = e.target;
