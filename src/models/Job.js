@@ -1,3 +1,4 @@
+// src/models/Job.js
 import mongoose from 'mongoose';
 
 // Define the Job Schema
@@ -11,19 +12,19 @@ const jobSchema = new mongoose.Schema({
     type: String,
     required: [true, 'Job description is required'],
   },
+  // Replace the category enum with ObjectId reference
   category: {
-    type: String,
-    required: [true, 'Job category is required'],
-    enum: [
-      'Plumbing', 'Electrical', 'Carpentry', 'Painting',
-      'Roofing', 'HVAC', 'Landscaping', 'Masonry',
-      'Flooring', 'Tiling', 'General Contracting', 'Drywall',
-      'Cabinetry', 'Fencing', 'Decking', 'Concrete',
-      'Window Installation', 'Door Installation', 'Appliance Repair',
-      'Handyman Services', 'Cleaning Services', 'Moving Services',
-      'Other'
-    ],
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'TradeCategory',
+    required: [true, 'Job category is required']
   },
+  // To this:
+  legacyCategory: {
+    type: String,
+    required: false
+    // Removed the enum restriction
+  },
+
   subCategories: [String],
   requiredSkills: [String],
   budget: {
@@ -91,8 +92,8 @@ const jobSchema = new mongoose.Schema({
     },
   },
   attachments: [{
-    name: String,
-    url: String,
+    name: { type: String, required: true },
+    url: { type: String, required: true },
     type: String,
     size: Number,
     uploadedAt: {
@@ -156,7 +157,7 @@ jobSchema.index({ 'location.coordinates': '2dsphere' });  // Geospatial index fo
 jobSchema.index({ category: 1, 'location.city': 1, status: 1 });  // Index for filtering jobs
 jobSchema.index({ customer: 1 });  // Index for customer
 jobSchema.index({ selectedTradesperson: 1 });  // Index for selected tradesperson
-jobSchema.index({ status: 1, timeline: 1 });  // Index for status and timeline
+jobSchema.index({ status: 1, 'timeline.postedDate': 1 });  // Index for status and timeline
 
 // Create and export Job model
 const Job = mongoose.models.Job || mongoose.model('Job', jobSchema);

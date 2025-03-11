@@ -28,24 +28,49 @@ export async function GET(request) {
     let query = {};
     
     if (status === 'pending') {
-      query.isVerified = false;
-      // Only include active accounts that haven't been explicitly rejected
-      query.isActive = true;
+      // For pending verification:
+      // - Email must be verified (user has signed up and verified email)
+      // - Admin verification not yet done (isVerified = false)
+      // - Account must be active (not disabled)
+      query = {
+        $and: [
+          { isVerified: false },     // Not verified by admin yet
+          { isActive: true },        // Account is active
+          { verificationDate: { $exists: false } }  // Never been reviewed before
+        ]
+      };
     } else if (status === 'verified') {
-      query.isVerified = true;
+      // For verified:
+      // - Has been verified by admin
+      query = {
+        isVerified: true
+      };
     } else if (status === 'rejected') {
-      // For simplicity, we're treating rejected as active=false
-      query.isActive = false;
+      // For rejected:
+      // - Has been reviewed (has verification date)
+      // - Either not verified or not active
+      query = {
+        $and: [
+          { verificationDate: { $exists: true } },  // Has been reviewed
+          { $or: [
+            { isVerified: false },     // Not verified
+            { isActive: false }        // Or not active
+          ]}
+        ]
+      };
     }
     
     // Add search filter if provided
     if (search) {
-      query.$or = [
-        { firstName: { $regex: search, $options: 'i' } },
-        { lastName: { $regex: search, $options: 'i' } },
-        { email: { $regex: search, $options: 'i' } },
-        { businessName: { $regex: search, $options: 'i' } }
-      ];
+      query.$and = query.$and || [];
+      query.$and.push({
+        $or: [
+          { firstName: { $regex: search, $options: 'i' } },
+          { lastName: { $regex: search, $options: 'i' } },
+          { email: { $regex: search, $options: 'i' } },
+          { businessName: { $regex: search, $options: 'i' } }
+        ]
+      });
     }
     
     // Add role filter - only tradespeople
@@ -53,6 +78,8 @@ export async function GET(request) {
     
     // Calculate pagination
     const skip = (page - 1) * limit;
+    
+    console.log("Query for tradespeople:", JSON.stringify(query, null, 2));
     
     // Execute queries in parallel for better performance
     const [tradespeople, totalCount] = await Promise.all([
@@ -62,6 +89,8 @@ export async function GET(request) {
         .limit(limit),
       Tradesperson.countDocuments(query)
     ]);
+    
+    console.log(`Found ${tradespeople.length} tradespeople with status: ${status}`);
     
     // Calculate total pages
     const totalPages = Math.ceil(totalCount / limit);

@@ -10,11 +10,14 @@ export default function JobsPage() {
   const router = useRouter();
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [categories, setCategories] = useState([]);
   const [pagination, setPagination] = useState({
     total: 0,
     page: 1,
     pages: 1
   });
+  
   const [filters, setFilters] = useState({
     category: searchParams.get("category") || "",
     city: searchParams.get("city") || "",
@@ -22,45 +25,130 @@ export default function JobsPage() {
     page: parseInt(searchParams.get("page") || "1")
   });
 
-  const categories = [
-    'All Categories',
-    'Plumbing', 'Electrical', 'Carpentry', 'Painting',
-    'Roofing', 'HVAC', 'Landscaping', 'Masonry',
-    'Flooring', 'Tiling', 'General Contracting', 'Drywall'
-  ];
+  // Load categories from API
+  useEffect(() => {
+    fetchCategories();
+  }, []);
 
+  // Fetch jobs when filters change
   useEffect(() => {
     fetchJobs();
   }, [filters]);
 
+  const fetchCategories = async () => {
+    try {
+      const response = await fetch('/api/categories');
+      if (!response.ok) {
+        throw new Error('Failed to fetch categories');
+      }
+      
+      const data = await response.json();
+      
+      // Ensure we have an array of categories
+      if (Array.isArray(data)) {
+        // Extract category names from category objects and add "All Categories" as the first option
+        const categoryNames = data.map(cat => {
+          // Handle category being an object with a name property
+          if (typeof cat === 'object' && cat !== null) {
+            return cat.name || 'Unknown';
+          }
+          // Handle category being a string
+          if (typeof cat === 'string') {
+            return cat;
+          }
+          return 'Unknown';
+        });
+        
+        setCategories(['All Categories', ...categoryNames]);
+      } else {
+        // Fallback categories if API fails
+        setCategories([
+          'All Categories',
+          'Plumbing', 'Electrical', 'Carpentry', 'Painting',
+          'Roofing', 'HVAC', 'Landscaping', 'Masonry',
+          'Flooring', 'Tiling', 'General Contracting', 'Drywall'
+        ]);
+      }
+    } catch (error) {
+      console.error('Error fetching categories:', error);
+      // Fallback categories if API fails
+      setCategories([
+        'All Categories',
+        'Plumbing', 'Electrical', 'Carpentry', 'Painting',
+        'Roofing', 'HVAC', 'Landscaping', 'Masonry',
+        'Flooring', 'Tiling', 'General Contracting', 'Drywall'
+      ]);
+    }
+  };
+
   const fetchJobs = async () => {
     setLoading(true);
-    try {
+    setError(null);
     
+    try {
       const params = new URLSearchParams();
+      
       if (filters.category && filters.category !== 'All Categories') {
         params.append('category', filters.category);
       }
+      
       if (filters.city) {
         params.append('city', filters.city);
       }
+      
       if (filters.search) {
         params.append('search', filters.search);
       }
+      
       params.append('page', filters.page.toString());
       params.append('limit', '10');
       
       const response = await fetch(`/api/jobs?${params.toString()}`);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        let errorMessage;
+        
+        try {
+          const errorJson = JSON.parse(errorText);
+          errorMessage = errorJson.error || errorJson.message || `API error: ${response.status}`;
+        } catch (e) {
+          errorMessage = `API error: ${response.status}`;
+        }
+        
+        throw new Error(errorMessage);
+      }
+      
       const data = await response.json();
       
-      if (response.ok) {
-        setJobs(data.jobs);
-        setPagination(data.pagination);
-      } else {
-        console.error('Failed to fetch jobs:', data.error);
+      if (!data.jobs || !Array.isArray(data.jobs)) {
+        throw new Error("Invalid response format from jobs API");
       }
+      
+      // Ensure jobs have properly processed category information
+      const processedJobs = data.jobs.map(job => {
+        // Process category data to ensure it's not an object
+        if (job.category && typeof job.category === 'object' && job.category !== null) {
+          // If category is an object, extract the name
+          return {
+            ...job,
+            categoryName: job.category.name || 'Unknown',
+            category: job.category.name || 'Unknown' // Replace the object with a string
+          };
+        }
+        return job;
+      });
+      
+      setJobs(processedJobs);
+      setPagination(data.pagination || {
+        total: processedJobs.length,
+        page: filters.page,
+        pages: Math.ceil(processedJobs.length / 10)
+      });
     } catch (error) {
       console.error('Error fetching jobs:', error);
+      setError(error.message || 'Failed to fetch jobs');
+      setJobs([]);
     } finally {
       setLoading(false);
     }
@@ -75,8 +163,12 @@ export default function JobsPage() {
     });
     
     // Update URL params
-    const params = new URLSearchParams(searchParams);
-    params.set(name, value);
+    const params = new URLSearchParams(searchParams.toString());
+    if (value) {
+      params.set(name, value);
+    } else {
+      params.delete(name);
+    }
     params.set('page', '1');
     router.replace(`/jobs?${params.toString()}`);
   };
@@ -88,15 +180,25 @@ export default function JobsPage() {
     });
     
     // Update URL param
-    const params = new URLSearchParams(searchParams);
+    const params = new URLSearchParams(searchParams.toString());
     params.set('page', newPage.toString());
     router.replace(`/jobs?${params.toString()}`);
+  };
+
+  const clearFilters = () => {
+    setFilters({
+      category: "",
+      city: "",
+      search: "",
+      page: 1
+    });
+    router.replace('/jobs');
   };
 
   const formatBudget = (budget) => {
     if (!budget) return 'Budget negotiable';
     
-    const { type, minAmount, maxAmount, currency } = budget;
+    const { type, minAmount, maxAmount, currency = '$' } = budget;
     
     if (type === 'negotiable') return 'Budget negotiable';
     if (type === 'fixed') return `${currency}${minAmount}`;
@@ -110,6 +212,28 @@ export default function JobsPage() {
     }
     
     return 'Budget negotiable';
+  };
+
+  // Get category display name - handles both string categories and category objects
+  const getCategoryDisplayName = (categoryData) => {
+    if (!categoryData) return 'Uncategorized';
+    
+    // If it's an object with a name property
+    if (typeof categoryData === 'object' && categoryData !== null) {
+      return categoryData.name || 'Uncategorized';
+    }
+    
+    // If it's a string
+    if (typeof categoryData === 'string') {
+      return categoryData;
+    }
+    
+    return 'Uncategorized';
+  };
+
+  const truncateDescription = (description) => {
+    if (!description) return '';
+    return description.length > 100 ? description.substring(0, 100) + '...' : description;
   };
 
   return (
@@ -139,7 +263,7 @@ export default function JobsPage() {
                   placeholder="Search job titles or descriptions"
                   value={filters.search}
                   onChange={handleFilterChange}
-                  className="w-full py-2 px-4 border block "
+                  className="w-full py-2 px-4 border rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
             </div>
@@ -154,7 +278,7 @@ export default function JobsPage() {
                   name="category"
                   value={filters.category}
                   onChange={handleFilterChange}
-                  className="shadow-sm py-[10px] px-4 border w-full block"
+                  className="shadow-sm py-2 px-4 border rounded-md w-full block focus:ring-blue-500 focus:border-blue-500"
                 >
                   {categories.map((category) => (
                     <option key={category} value={category === 'All Categories' ? '' : category}>
@@ -177,10 +301,19 @@ export default function JobsPage() {
                   placeholder="Enter city name"
                   value={filters.city}
                   onChange={handleFilterChange}
-                  className="shadow-sm py-2 px-4 block border w-full"
+                  className="shadow-sm py-2 px-4 block border rounded-md w-full focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
             </div>
+          </div>
+          
+          <div className="mt-4 flex justify-end">
+            <button
+              onClick={clearFilters}
+              className="px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            >
+              Clear Filters
+            </button>
           </div>
         </div>
 
@@ -190,12 +323,28 @@ export default function JobsPage() {
             <div className="flex justify-center py-12">
               <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
             </div>
+          ) : error ? (
+            <div className="text-center py-16 bg-white rounded-lg shadow">
+              <svg className="mx-auto h-12 w-12 text-red-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+              <h3 className="mt-2 text-sm font-medium text-gray-900">Error Loading Jobs</h3>
+              <p className="mt-1 text-sm text-gray-500">{error}</p>
+              <div className="mt-6">
+                <button
+                  onClick={fetchJobs}
+                  className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                >
+                  Retry
+                </button>
+              </div>
+            </div>
           ) : jobs.length > 0 ? (
             <div className="bg-white shadow overflow-hidden sm:rounded-md">
               <ul className="divide-y divide-gray-200">
                 {jobs.map((job) => (
-                  <li key={job._id} className="shadow-md">
-                    <Link href={`/jobs/${job._id}`} className="block hover:bg-blue-50">
+                  <li key={job._id} className="hover:bg-blue-50 transition duration-150">
+                    <Link href={`/jobs/${job._id}`} className="block">
                       <div className="px-4 py-4 sm:px-6">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center">
@@ -216,7 +365,7 @@ export default function JobsPage() {
                             </div>
                             <div className="ml-4">
                               <div className="text-sm font-medium text-blue-600">
-                                {job.title}
+                                {job.title || "Untitled Job"}
                                 {job.isUrgent && (
                                   <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
                                     Urgent
@@ -224,9 +373,21 @@ export default function JobsPage() {
                                 )}
                               </div>
                               <div className="text-sm text-gray-500 mt-1">
-                                <span>{job.category}</span>
-                                <span className="mx-1">•</span>
-                                <span>{job.location?.city}, {job.location?.state}</span>
+                                <span>
+                                  {job.categoryName || 
+                                   getCategoryDisplayName(job.category) || 
+                                   "Uncategorized"}
+                                </span>
+                                {job.location && (job.location.city || job.location.state) && (
+                                  <>
+                                    <span className="mx-1">•</span>
+                                    <span>
+                                      {job.location.city ? job.location.city : ""} 
+                                      {job.location.city && job.location.state ? ", " : ""}
+                                      {job.location.state ? job.location.state : ""}
+                                    </span>
+                                  </>
+                                )}
                               </div>
                             </div>
                           </div>
@@ -236,10 +397,14 @@ export default function JobsPage() {
                             </p>
                           </div>
                         </div>
-                        <div className="mt-2  sm:flex sm:justify-between">
+                        <div className="mt-2 sm:flex sm:justify-between">
                           <div className="sm:flex">
-                            <p className="flex  items-center text-sm text-gray-500">
-                              <span>des: {job.description?.substring(0, 100)}...</span>
+                            <p className="flex items-center text-sm text-gray-500">
+                              {job.description ? (
+                                <span>{truncateDescription(job.description)}</span>
+                              ) : (
+                                <span className="italic text-gray-400">No description provided</span>
+                              )}
                             </p>
                           </div>
                           <div className="mt-2 flex items-center text-sm text-gray-500 sm:mt-0">
@@ -247,13 +412,14 @@ export default function JobsPage() {
                               <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd" />
                             </svg>
                             <p>
-                              Posted {new Date(job.timeline?.postedDate).toLocaleDateString()}
+                              Posted {job.timeline?.postedDate ? new Date(job.timeline.postedDate).toLocaleDateString() : 
+                                     job.createdAt ? new Date(job.createdAt).toLocaleDateString() : "Recently"}
                             </p>
                           </div>
                         </div>
                         <div className="mt-2 flex justify-between items-center">
                           <div className="flex items-center">
-                            {job.customer.profileImage ? (
+                            {job.customer?.profileImage ? (
                               <Image
                                 className="h-6 w-6 rounded-full"
                                 src={job.customer.profileImage}
@@ -264,12 +430,13 @@ export default function JobsPage() {
                             ) : (
                               <div className="h-6 w-6 rounded-full bg-gray-200 flex items-center justify-center">
                                 <span className="text-xs text-gray-500">
-                                  {job.customer.firstName?.charAt(0)}
+                                  {job.customer?.firstName ? job.customer.firstName.charAt(0) : "U"}
                                 </span>
                               </div>
                             )}
                             <span className="ml-2 text-sm font-medium text-gray-600">
-                              By {job.customer.firstName} {job.customer.lastName}
+                              By {job.customer?.firstName || ""} {job.customer?.lastName || ""}
+                              {!job.customer?.firstName && !job.customer?.lastName && "Anonymous"}
                             </span>
                           </div>
                           <div className="text-sm text-gray-500">
@@ -327,15 +494,7 @@ export default function JobsPage() {
               </p>
               <div className="mt-6">
                 <button
-                  onClick={() => {
-                    setFilters({
-                      category: "",
-                      city: "",
-                      search: "",
-                      page: 1
-                    });
-                    router.push('/jobs');
-                  }}
+                  onClick={clearFilters}
                   className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                 >
                   Clear filters

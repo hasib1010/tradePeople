@@ -4,6 +4,7 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import { connectToDatabase } from '@/lib/db';
 import { User } from '@/models/User';
 import bcrypt from 'bcryptjs';
+import { getServerSession } from "next-auth/next";
 
 export const authOptions = {
   providers: [
@@ -97,5 +98,23 @@ export const authOptions = {
   secret: process.env.NEXTAUTH_SECRET,
   debug: process.env.NODE_ENV === 'development',
 };
+
+// Add the isAdmin function that's being imported in your route files
+export async function isAdmin(request) {
+  try {
+    // Get the session from the request
+    const session = await getServerSession(request, null, authOptions);
+    
+    // Check if user exists and has admin role
+    if (session?.user?.role === 'admin') {
+      return { isAuthenticated: true, user: session.user };
+    }
+    
+    return { isAuthenticated: false };
+  } catch (error) {
+    console.error('Admin authentication error:', error);
+    return { isAuthenticated: falsej, error: error.message };
+  }
+}
 
 export default authOptions;

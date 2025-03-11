@@ -23,7 +23,7 @@ export default function AdminDashboardContent() {
         totalUsers: 0,
         totalTradespeople: 0,
         totalCustomers: 0,
-        activeJobs: 0,  
+        activeJobs: 0,
         pendingVerifications: 0,
         totalCredits: 0,
         totalRevenue: 0
@@ -284,10 +284,10 @@ export default function AdminDashboardContent() {
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap">
                                                     <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${user.role === 'tradesperson'
-                                                            ? 'bg-blue-100 text-blue-800'
-                                                            : user.role === 'customer'
-                                                                ? 'bg-green-100 text-green-800'
-                                                                : 'bg-purple-100 text-purple-800'
+                                                        ? 'bg-blue-100 text-blue-800'
+                                                        : user.role === 'customer'
+                                                            ? 'bg-green-100 text-green-800'
+                                                            : 'bg-purple-100 text-purple-800'
                                                         }`}>
                                                         {user.role === 'tradesperson' ? 'Tradesperson' :
                                                             user.role === 'customer' ? 'Customer' : 'Admin'}
@@ -298,8 +298,8 @@ export default function AdminDashboardContent() {
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap">
                                                     <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${user.isActive
-                                                            ? 'bg-green-100 text-green-800'
-                                                            : 'bg-red-100 text-red-800'
+                                                        ? 'bg-green-100 text-green-800'
+                                                        : 'bg-red-100 text-red-800'
                                                         }`}>
                                                         {user.isActive ? 'Active' : 'Inactive'}
                                                     </span>
@@ -388,6 +388,18 @@ export default function AdminDashboardContent() {
                                         </span>
                                     </Link>
                                 </li>
+                                <li className="py-4">
+                                    <Link href="/dashboard/admin/categories" className="group flex items-center">
+                                        <span className="flex-shrink-0 h-10 w-10 flex items-center justify-center bg-teal-100 rounded-md group-hover:bg-teal-200">
+                                            <svg className="h-6 w-6 text-teal-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                                            </svg>
+                                        </span>
+                                        <span className="ml-4 text-base font-medium text-gray-900 group-hover:text-gray-700">
+                                            Manage Trade Categories
+                                        </span>
+                                    </Link>
+                                </li>
                             </ul>
                         </div>
                     </div>
@@ -445,10 +457,10 @@ export default function AdminDashboardContent() {
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap">
                                                     <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${job.status === 'open' ? 'bg-green-100 text-green-800' :
-                                                            job.status === 'in-progress' ? 'bg-yellow-100 text-yellow-800' :
-                                                                job.status === 'completed' ? 'bg-blue-100 text-blue-800' :
-                                                                    job.status === 'canceled' ? 'bg-red-100 text-red-800' :
-                                                                        'bg-gray-100 text-gray-800'
+                                                        job.status === 'in-progress' ? 'bg-yellow-100 text-yellow-800' :
+                                                            job.status === 'completed' ? 'bg-blue-100 text-blue-800' :
+                                                                job.status === 'canceled' ? 'bg-red-100 text-red-800' :
+                                                                    'bg-gray-100 text-gray-800'
                                                         }`}>
                                                         {job.status === 'open' ? 'Open' :
                                                             job.status === 'in-progress' ? 'In Progress' :

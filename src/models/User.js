@@ -1,6 +1,7 @@
 // src/models/User.js
 import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
+import crypto from 'crypto';
 
 const userSchema = new mongoose.Schema({
     email: {
@@ -44,33 +45,20 @@ const userSchema = new mongoose.Schema({
         state: String,
         postalCode: String,
         country: String,
-        // Make the entire coordinates field optional
-        coordinates: {
-            type: {
-                type: String,
-                enum: ['Point'],
-                required: function () {
-                    // Only require type if coordinates exist
-                    return Array.isArray(this.location?.coordinates?.coordinates) &&
-                        this.location.coordinates.coordinates.length === 2;
-                }
-            },
-            coordinates: {
-                type: [Number],
-                validate: {
-                    validator: function (v) {
-                        // Either have no coordinates or have exactly 2 valid numbers
-                        return !v || (v.length === 2 && !isNaN(v[0]) && !isNaN(v[1]));
-                    },
-                    message: 'Coordinates must be an array of two numbers'
-                }
-            }
-        }
     },
+    // Email verification fields
     isVerified: {
         type: Boolean,
         default: false,
     },
+    verificationToken: String,
+    verificationTokenExpires: Date,
+    
+    // Password reset fields
+    resetPasswordToken: String,
+    resetPasswordExpires: Date,
+    
+    // Account status and timestamps
     isActive: {
         type: Boolean,
         default: true,
@@ -84,9 +72,6 @@ const userSchema = new mongoose.Schema({
     discriminatorKey: 'role',
     timestamps: true,
 });
-
-// Add index for location-based queries
-userSchema.index({ 'location.coordinates': '2dsphere' });
 
 // Password hashing middleware
 userSchema.pre('save', async function (next) {
@@ -104,6 +89,56 @@ userSchema.pre('save', async function (next) {
 // Method to compare passwords
 userSchema.methods.comparePassword = async function (candidatePassword) {
     return bcrypt.compare(candidatePassword, this.password);
+};
+
+// Generate email verification token
+userSchema.methods.generateVerificationToken = function() {
+    const verificationToken = crypto.randomBytes(32).toString('hex');
+    
+    this.verificationToken = crypto
+        .createHash('sha256')
+        .update(verificationToken)
+        .digest('hex');
+    
+    // Token expires in 24 hours
+    this.verificationTokenExpires = Date.now() + 24 * 60 * 60 * 1000;
+    
+    return verificationToken;
+};
+
+// Generate password reset token
+userSchema.methods.generatePasswordResetToken = function() {
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    
+    this.resetPasswordToken = crypto
+        .createHash('sha256')
+        .update(resetToken)
+        .digest('hex');
+    
+    // Token expires in 1 hour
+    this.resetPasswordExpires = Date.now() + 60 * 60 * 1000;
+    
+    return resetToken;
+};
+
+// Verify email with token
+userSchema.methods.verifyEmail = function(token) {
+    const hashedToken = crypto
+        .createHash('sha256')
+        .update(token)
+        .digest('hex');
+    
+    const isValid = 
+        this.verificationToken === hashedToken && 
+        this.verificationTokenExpires > Date.now();
+    
+    if (isValid) {
+        this.isVerified = true;
+        this.verificationToken = undefined;
+        this.verificationTokenExpires = undefined;
+    }
+    
+    return isValid;
 };
 
 // Customer schema (extends User)

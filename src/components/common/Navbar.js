@@ -120,6 +120,11 @@ export default function Navbar() {
               isActive: pathname.includes("/admin/users")
             },
             {
+              href: "/admin/tradespeople",
+              label: "Manage Tradespeople",
+              isActive: pathname.includes("/admin/tradespeople")
+            },
+            {
               href: "/admin/jobs/manage",
               label: "Manage Jobs",
               isActive: pathname.includes("/admin/jobs/manage")
@@ -172,6 +177,11 @@ export default function Navbar() {
               href: "/jobs/post",
               label: "Post a Job",
               isActive: pathname === "/jobs/post"
+            },
+            {
+              href: "/my-jobs",
+              label: "My Jobs",
+              isActive: pathname === "/my-jobs" || pathname.startsWith("/my-jobs/")
             },
             {
               href: "/messages",

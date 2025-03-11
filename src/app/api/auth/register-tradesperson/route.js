@@ -1,8 +1,11 @@
 // src/app/api/auth/register-tradesperson/route.js
 import { NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/db";
+import bcrypt from "bcryptjs";
+import TempUser from "@/models/TempUser";
 import { Tradesperson } from "@/models/User";
 import { uploadImage } from "@/lib/cloudinary";
+import { sendEmail } from "@/lib/email";
 
 export async function POST(request) {
   try {
@@ -27,12 +30,50 @@ export async function POST(request) {
     
     await connectToDatabase();
     
-    // Check if user already exists
+    // Check if user already exists in the main User collection
     const existingUser = await Tradesperson.findOne({ email });
     if (existingUser) {
       return NextResponse.json(
         { success: false, message: "User with this email already exists" },
         { status: 400 }
+      );
+    }
+    
+    // Check if user exists in temporary collection
+    const existingTempUser = await TempUser.findOne({ email });
+    if (existingTempUser) {
+      // If user exists but hasn't verified, generate a new token and send email again
+      const verificationToken = existingTempUser.generateVerificationToken();
+      await existingTempUser.save();
+      
+      // Create verification URL
+      const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000';
+      const verificationURL = `${baseUrl}/verify-email?token=${verificationToken}`;
+      
+      // Send verification email
+      try {
+        await sendEmail({
+          to: existingTempUser.email,
+          subject: "Verify Your Email - Tradie Service Marketplace",
+          html: `
+            <h1>Welcome to Tradie Service Marketplace!</h1>
+            <p>Hello ${existingTempUser.firstName},</p>
+            <p>We noticed you haven't verified your email yet. Please click the link below to verify your email:</p>
+            <a href="${verificationURL}" style="display: inline-block; padding: 10px 20px; background-color: #4F46E5; color: white; text-decoration: none; border-radius: 5px;">Verify My Email</a>
+            <p>This link will expire in 24 hours.</p>
+            <p>If you did not create an account, please ignore this email.</p>
+          `
+        });
+      } catch (emailError) {
+        console.error("Error sending verification email:", emailError);
+      }
+      
+      return NextResponse.json(
+        { 
+          success: true, 
+          message: "A new verification email has been sent. Please check your inbox." 
+        },
+        { status: 200 }
       );
     }
     
@@ -69,7 +110,6 @@ export async function POST(request) {
         return {
           ...cert,
           documentUrl: licenseDocumentUrl,
-          isVerified: false
         };
       }
       return cert;
@@ -79,47 +119,78 @@ export async function POST(request) {
     const processedInsurance = {
       ...insurance,
       documentUrl: insuranceDocumentUrl || "",
-      isVerified: false
     };
     
-    // Fix location coordinates - important for GeoJSON Point type
-    const location = {
+    // Hash password
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+    
+    // Add default coordinates to the location data
+    const enhancedLocation = {
       ...locationData,
+      // Add default coordinates to pass validation
       coordinates: {
         type: "Point",
-        // Use default coordinates if none provided, or omit coordinates entirely
-        coordinates: [0, 0] // Default to [0,0] (null island) if no coordinates provided
+        coordinates: [0, 0] // Default to "null island" (0,0)
       }
     };
     
-    // Create new tradesperson
-    const newTradesperson = new Tradesperson({
+    // Create new temporary user
+    const newTempUser = new TempUser({
       email,
-      password,
+      password: hashedPassword,
       firstName,
       lastName,
       phoneNumber,
+      role: "tradesperson",
+      // Use the enhanced location with coordinates
+      location: enhancedLocation,
+      // Tradesperson specific fields
       businessName,
       skills,
       yearsOfExperience: yearsOfExperience || 0,
       hourlyRate: hourlyRate || 0,
       description,
-      location,
       profileImage: profileImageUrl || "https://i.ibb.co.com/HfL0Fr7P/default-profile.jpg",
-      role: "tradesperson",
       certifications: processedCertifications,
       insurance: processedInsurance,
       serviceArea,
-      credits: {
-        available: 5, // Give 5 free credits to new tradespeople
-        spent: 0
-      }
     });
     
-    await newTradesperson.save();
+    // Generate verification token
+    const verificationToken = newTempUser.generateVerificationToken();
+    
+    // Save the temporary user
+    await newTempUser.save();
+    
+    // Create verification URL
+    const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000';
+    const verificationURL = `${baseUrl}/verify-email?token=${verificationToken}`;
+    
+    // Send verification email
+    try {
+      await sendEmail({
+        to: newTempUser.email,
+        subject: "Verify Your Email - Tradie Service Marketplace",
+        html: `
+          <h1>Welcome to Tradie Service Marketplace!</h1>
+          <p>Hello ${newTempUser.firstName},</p>
+          <p>Thank you for registering as a tradesperson. Please verify your email by clicking the link below:</p>
+          <a href="${verificationURL}" style="display: inline-block; padding: 10px 20px; background-color: #4F46E5; color: white; text-decoration: none; border-radius: 5px;">Verify My Email</a>
+          <p>This link will expire in 24 hours.</p>
+          <p>If you did not create an account, please ignore this email.</p>
+        `
+      });
+    } catch (emailError) {
+      console.error("Error sending verification email:", emailError);
+      // Continue registration process even if email fails
+    }
     
     return NextResponse.json(
-      { success: true, message: "Tradesperson registered successfully" },
+      { 
+        success: true, 
+        message: "Registration successful. Please check your email to verify your account." 
+      },
       { status: 201 }
     );
   } catch (error) {

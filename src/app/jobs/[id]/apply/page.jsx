@@ -25,6 +25,7 @@ export default function JobApplicationPage() {
     const [successMessage, setSuccessMessage] = useState("");
     const [credits, setCredits] = useState(0);
     const [showCreditModal, setShowCreditModal] = useState(false);
+    const [categories, setCategories] = useState([]);
 
     const [formData, setFormData] = useState({
         coverLetter: "",
@@ -53,13 +54,39 @@ export default function JobApplicationPage() {
     useEffect(() => {
         const fetchJobDataAndCredits = async () => {
             try {
+                // First fetch categories to create a lookup map
+                const categoriesResponse = await fetch('/api/categories');
+                let categoriesMap = {};
+                
+                if (categoriesResponse.ok) {
+                    const categoriesData = await categoriesResponse.json();
+                    setCategories(categoriesData);
+                    
+                    if (Array.isArray(categoriesData)) {
+                        // Create a map of category ID to category name
+                        categoriesData.forEach(category => {
+                            if (category._id) {
+                                categoriesMap[category._id] = category.name || 'Unknown';
+                            }
+                        });
+                    }
+                }
+
+                // Then fetch the job
                 const jobResponse = await fetch(`/api/jobs/${id}`);
                 if (!jobResponse.ok) {
                     if (jobResponse.status === 404) throw new Error("Job not found");
                     throw new Error("Failed to load job details");
                 }
                 const jobData = await jobResponse.json();
-                setJob(jobData);
+                
+                // Process the category in the job data
+                const processedJob = {
+                    ...jobData,
+                    categoryName: getCategoryName(jobData.category, categoriesMap)
+                };
+                
+                setJob(processedJob);
 
                 if (jobData.status !== "open") {
                     setError("This job is no longer accepting applications");
@@ -115,6 +142,41 @@ export default function JobApplicationPage() {
         }
     }, [id, router, session, status]);
 
+    // Helper function to get the category name
+    const getCategoryName = (category, categoriesMap = {}) => {
+        if (!category) return "Uncategorized";
+        
+        // If it's a string, check if it looks like an ObjectId (24 hex characters)
+        if (typeof category === 'string') {
+            // If it's an ObjectId string, look it up in the categories map
+            if (/^[0-9a-fA-F]{24}$/.test(category)) {
+                return categoriesMap[category] || "Unknown Category";
+            }
+            // If it's a regular string, return it directly
+            return category;
+        }
+        
+        // If it's an object with a name property
+        if (typeof category === 'object' && category !== null) {
+            if (category.name) {
+                return category.name;
+            }
+            // If the category has an _id, look it up in the categories map
+            if (category._id && categoriesMap[category._id]) {
+                return categoriesMap[category._id];
+            }
+            // Try toString as a last resort
+            if (category.toString && typeof category.toString === 'function') {
+                const stringValue = category.toString();
+                if (stringValue !== '[object Object]') {
+                    return stringValue;
+                }
+            }
+        }
+        
+        return "Uncategorized";
+    };
+
     const handleChange = (e) => {
         const { name, value, type, checked } = e.target;
         if (type === "checkbox") {
@@ -161,7 +223,6 @@ export default function JobApplicationPage() {
         setShowCreditModal(true);
     };
 
-    // In JobApplicationPage
     const handleSubmit = async () => {
         setSubmitting(true);
         setError(null);
@@ -278,7 +339,7 @@ export default function JobApplicationPage() {
                                 </h3>
                                 <p className="text-sm text-gray-600">
                                     This job requires <span className="font-medium">{creditCost}</span> credit{creditCost > 1 ? "s" : ""} to apply.
-                                    {credits >= creditCost ? " You’re ready to apply!" : " You need more credits."}
+                                    {credits >= creditCost ? " You're ready to apply!" : " You need more credits."}
                                 </p>
                             </div>
                         </div>
@@ -310,23 +371,28 @@ export default function JobApplicationPage() {
                 <div className="bg-white shadow rounded-lg mb-8">
                     <div className="px-6 py-5">
                         <h3 className="text-lg font-semibold text-gray-900">Job Summary</h3>
-                        <p className="mt-2 text-sm text-gray-600">{job.description.substring(0, 200)}...</p>
+                        <p className="mt-2 text-sm text-gray-600">{job.description?.substring(0, 200)}...</p>
                         <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-4">
                             <div>
                                 <span className="text-xs font-medium text-gray-500 uppercase">Location</span>
-                                <p className="mt-1 text-sm text-gray-900">{job.location.city}, {job.location.state}</p>
+                                <p className="mt-1 text-sm text-gray-900">
+                                    {job.location?.city ? job.location.city : ""} 
+                                    {job.location?.city && job.location?.state ? ", " : ""}
+                                    {job.location?.state ? job.location.state : ""}
+                                    {!job.location?.city && !job.location?.state && "Location not specified"}
+                                </p>
                             </div>
                             <div>
                                 <span className="text-xs font-medium text-gray-500 uppercase">Category</span>
-                                <p className="mt-1 text-sm text-gray-900">{job.category}</p>
+                                <p className="mt-1 text-sm text-gray-900">{job.categoryName || "Uncategorized"}</p>
                             </div>
                             <div>
                                 <span className="text-xs font-medium text-gray-500 uppercase">Budget</span>
                                 <p className="mt-1 text-sm text-gray-900">
-                                    {job.budget.type === "fixed"
-                                        ? `${job.budget.currency} ${job.budget.minAmount}`
-                                        : job.budget.type === "range"
-                                            ? `${job.budget.currency} ${job.budget.minAmount} - ${job.budget.maxAmount}`
+                                    {job.budget?.type === "fixed"
+                                        ? `${job.budget.currency || "$"} ${job.budget.minAmount}`
+                                        : job.budget?.type === "range"
+                                            ? `${job.budget.currency || "$"} ${job.budget.minAmount} - ${job.budget.maxAmount}`
                                             : "Negotiable"}
                                 </p>
                             </div>
@@ -342,7 +408,7 @@ export default function JobApplicationPage() {
                     <div className="bg-white shadow rounded-lg">
                         <div className="px-6 py-5">
                             <h3 className="text-lg font-semibold text-gray-900">Cover Letter</h3>
-                            <p className="mt-1 text-sm text-gray-600">Why you’re the right fit for this job</p>
+                            <p className="mt-1 text-sm text-gray-600">Why you're the right fit for this job</p>
                             <textarea
                                 id="coverLetter"
                                 name="coverLetter"
@@ -478,7 +544,7 @@ export default function JobApplicationPage() {
                                     ) : credits < creditCost ? (
                                         `Need ${creditCost} Credit${creditCost > 1 ? "s" : ""}`
                                     ) : (
-                                        `Apply (${creditCost} Credit${creditCost > 1 ? "s" : ""})`
+                                        `Purchase Job (${creditCost} Credit${creditCost > 1 ? "s" : ""})`
                                     )}
                                 </button>
                             </div>

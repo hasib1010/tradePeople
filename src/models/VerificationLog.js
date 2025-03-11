@@ -1,12 +1,11 @@
-
+// src/models/VerificationLog.js
 import mongoose from 'mongoose';
 
 const verificationLogSchema = new mongoose.Schema({
   tradesperson: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
-    required: true,
-    index: true
+    required: true
   },
   admin: {
     type: mongoose.Schema.Types.ObjectId,
@@ -24,16 +23,14 @@ const verificationLogSchema = new mongoose.Schema({
   },
   timestamp: {
     type: Date,
-    default: Date.now,
-    index: true
+    default: Date.now
   }
-}, {
-  timestamps: true
-});
+}, { timestamps: true });
 
-// Add compound index for tradesperson and timestamp
-verificationLogSchema.index({ tradesperson: 1, timestamp: -1 });
+// Add index for faster retrieval
+verificationLogSchema.index({ tradesperson: 1 });
+verificationLogSchema.index({ admin: 1 });
+verificationLogSchema.index({ timestamp: -1 });
 
-const VerificationLog = mongoose.models.VerificationLog || mongoose.model('VerificationLog', verificationLogSchema);
-
-export { VerificationLog };
+export const VerificationLog = mongoose.models.VerificationLog || 
+  mongoose.model('VerificationLog', verificationLogSchema);

@@ -11,7 +11,7 @@ export default function AdminJobManagementContent() {
       redirect("/login?callbackUrl=/admin/jobs/manage");
     },
   });
-  
+
   const router = useRouter();
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -68,6 +68,26 @@ export default function AdminJobManagementContent() {
     } catch (err) {
       setError(err.message);
     }
+  };
+
+  // Helper function to get category name display
+  const getCategoryDisplay = (job) => {
+    // Check if category is populated as an object with name property
+    if (job.category && typeof job.category === 'object' && job.category.name) {
+      return job.category.name;
+    }
+
+    // Fallback to legacyCategory if available
+    if (job.legacyCategory) {
+      return job.legacyCategory;
+    }
+
+    // Last resort - show category ID with a note
+    return (
+      <span className="text-gray-500 italic">
+        {typeof job.category === 'string' ? job.category : 'Unknown'}
+      </span>
+    );
   };
 
   if (status === "loading" || loading) {
@@ -130,16 +150,19 @@ export default function AdminJobManagementContent() {
                     <td className="px-6 py-4 whitespace-nowrap">
                       {job.customer.firstName} {job.customer.lastName}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">{job.category}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+  {job.categoryName || 
+   (job.category && typeof job.category === 'object' && job.category.name) || 
+   (typeof job.category === 'string' ? job.category : 'Unknown')}
+</td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span
-                        className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                          job.status === "draft"
-                            ? "bg-yellow-100 text-yellow-800"
-                            : job.status === "open"
+                        className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${job.status === "draft"
+                          ? "bg-yellow-100 text-yellow-800"
+                          : job.status === "open"
                             ? "bg-green-100 text-green-800"
                             : "bg-gray-100 text-gray-800"
-                        }`}
+                          }`}
                       >
                         {job.status}
                       </span>

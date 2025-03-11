@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { signIn } from "next-auth/react";
 import Image from "next/image";
+import { Autocomplete, TextField, Chip } from '@mui/material';
 
 export default function RegisterTradespersonPageContent() {
   const router = useRouter();
@@ -202,7 +203,7 @@ export default function RegisterTradespersonPageContent() {
       }
 
       const isValidPost = isValidUKPostcode(formData?.location?.postalCode)
-      
+
       if (!isValidPost) {
         setError("Please provide a valid uk postal code")
 
@@ -457,24 +458,52 @@ export default function RegisterTradespersonPageContent() {
                 />
               </div>
               <div className="md:col-span-2">
-                <label htmlFor="skills" className="block text-sm font-medium text-gray-700">
+                <label htmlFor="skills" className="block text-sm font-medium text-gray-700 mb-1">
                   Skills & Expertise*
                 </label>
-                <select
-                  id="skills"
-                  name="skills"
+                <Autocomplete
                   multiple
-                  required
+                  id="skills"
+                  options={skillOptions}
                   value={formData.skills}
-                  onChange={handleChange}
-                  className="mt-1 py-3 pl-4 border block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm h-40"
-                >
-                  {skillOptions.map(skill => (
-                    <option className="py-2" key={skill} value={skill}>{skill}</option>
-                  ))}
-                </select>
+                  onChange={(event, newValue) => {
+                    setFormData({
+                      ...formData,
+                      skills: newValue
+                    });
+                  }}
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      variant="outlined"
+                      placeholder="Select skills"
+                      error={step === 2 && error && formData.skills.length === 0}
+                      helperText={step === 2 && error && formData.skills.length === 0 ? "Please select at least one skill" : ""}
+                      fullWidth
+                    />
+                  )}
+                  renderTags={(value, getTagProps) =>
+                    value.map((option, index) => (
+                      <Chip
+                        label={option}
+                        {...getTagProps({ index })}
+                        key={option}
+                        color="primary"
+                        variant="outlined"
+                      />
+                    ))
+                  }
+                  getOptionLabel={(option) => option}
+                  filterSelectedOptions
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      padding: '3px 9px',
+                      borderRadius: '0.375rem',
+                    }
+                  }}
+                />
                 <p className="mt-1 text-xs text-gray-500">
-                  Hold Ctrl/Cmd to select multiple skills
+                  Start typing to search for skills or browse the dropdown
                 </p>
               </div>
               <div>

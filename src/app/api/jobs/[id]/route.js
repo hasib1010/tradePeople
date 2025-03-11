@@ -1,4 +1,3 @@
-// src/app/api/jobs/[id]/route.js
 import { NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/db";
 import Job from "@/models/Job";
@@ -13,9 +12,11 @@ export async function GET(request, { params }) {
     await connectToDatabase();
 
     // Find the job by ID with customer and selected tradesperson
+    // Using .lean() to get a plain JavaScript object instead of a Mongoose document
     const job = await Job.findById(id)
       .populate("customer", "firstName lastName name email profileImage phoneNumber")
-      .populate("selectedTradesperson", "firstName lastName name profileImage");
+      .populate("selectedTradesperson", "firstName lastName name profileImage")
+      .lean(); // Convert to plain object
 
     if (!job) {
       return NextResponse.json(
@@ -27,18 +28,25 @@ export async function GET(request, { params }) {
     // Fetch applications separately and add them to the response
     const applications = await Application.find({ job: id })
       .populate("tradesperson", "firstName lastName name email profileImage")
-      .sort({ submittedAt: -1 });
+      .sort({ submittedAt: -1 })
+      .lean(); // Convert to plain objects
 
-    // Convert job to a plain object we can add properties to
-    const jobWithApplications = job.toObject();
+    // Ensure attachments array exists and is properly formatted
+    if (!job.attachments) {
+      job.attachments = [];
+    }
     
     // Add applications to the job object
-    jobWithApplications.applications = applications;
+    job.applications = applications;
     
     // Make sure applicationCount matches the actual number of applications
-    jobWithApplications.applicationCount = applications.length;
+    job.applicationCount = applications.length;
 
-    return NextResponse.json(jobWithApplications);
+    // Debug log to verify attachments are included
+    console.log(`Job ${id} has ${job.attachments?.length || 0} attachments:`, 
+                job.attachments?.map(att => att.name || 'unnamed attachment') || []);
+
+    return NextResponse.json(job);
   } catch (error) {
     console.error("Error fetching job:", error);
     return NextResponse.json(
@@ -108,10 +116,15 @@ export async function PATCH(request, { params }) {
     if (data.visibility) job.visibility = data.visibility;
     if (data.selectedTradesperson) job.selectedTradesperson = data.selectedTradesperson;
     
-    await job.save();
+    // Use direct MongoDB update to avoid issues with attachments validation
+    const updatedJob = await Job.findByIdAndUpdate(
+      id,
+      { $set: job.toObject() },
+      { new: true, runValidators: false }
+    );
     
     return NextResponse.json(
-      { success: true, job, message: "Job updated successfully" }
+      { success: true, job: updatedJob, message: "Job updated successfully" }
     );
   } catch (error) {
     console.error("Error updating job:", error);

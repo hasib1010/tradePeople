@@ -578,7 +578,7 @@ export default function ApplicationDetailPage() {
                       {application.job.customer?.firstName} {application.job.customer?.lastName}
                     </h3>
                     {/* Only show contact details if application is accepted */}
-                    {application.status === 'accepted' ? (
+                    {application.status === 'pending' ? (
                       <div className="mt-2 text-sm text-gray-500 space-y-1">
                         <p>
                           <span className="font-medium">Email:</span> {application.job.customer?.email}

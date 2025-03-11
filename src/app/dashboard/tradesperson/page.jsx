@@ -11,7 +11,14 @@ export default function TradespersonDashboard() {
     onUnauthenticated() {
       redirect("/login?callbackUrl=/dashboard/tradesperson");
     },
-  });
+  }); 
+  useEffect(() => {
+    // Check role when authenticated
+    if (status === "authenticated" && session?.user?.role !== "tradesperson") {
+      // Redirect to the appropriate dashboard based on role
+      router.push(`/dashboard/${session?.user?.role || ""}`);
+    }
+  }, [status, session, router]);
 
   const [dashboardData, setDashboardData] = useState({
     availableJobs: 0,
@@ -49,16 +56,16 @@ export default function TradespersonDashboard() {
 
       // Fetch available jobs count (matching tradesperson skills)
       fetchJobsData();
-      
+
       // Fetch applications data
       fetchApplicationsData();
-      
+
       // Fetch user profile with credits info
       fetchProfileData();
-      
+
       // Fetch recent activity
       fetchActivityData();
-      
+
       // Fetch job progress data
       fetchJobProgressData();
     };
@@ -68,7 +75,7 @@ export default function TradespersonDashboard() {
         const jobsResponse = await fetch('/api/jobs/matching');
         if (!jobsResponse.ok) throw new Error("Failed to load matching jobs");
         const jobsData = await jobsResponse.json();
-        
+
         setDashboardData(prev => ({
           ...prev,
           availableJobs: jobsData.count || 0
@@ -92,7 +99,7 @@ export default function TradespersonDashboard() {
         const applicationsResponse = await fetch('/api/applications/stats');
         if (!applicationsResponse.ok) throw new Error("Failed to load application stats");
         const applicationsData = await applicationsResponse.json();
-        
+
         setDashboardData(prev => ({
           ...prev,
           applications: {
@@ -121,7 +128,7 @@ export default function TradespersonDashboard() {
         const profileResponse = await fetch('/api/profile');
         if (!profileResponse.ok) throw new Error("Failed to load profile data");
         const profileData = await profileResponse.json();
-        
+
         setDashboardData(prev => ({
           ...prev,
           credits: profileData.user?.credits?.available || 0
@@ -145,7 +152,7 @@ export default function TradespersonDashboard() {
         const activityResponse = await fetch('/api/activity');
         if (!activityResponse.ok) throw new Error("Failed to load activity data");
         const activityData = await activityResponse.json();
-        
+
         setDashboardData(prev => ({
           ...prev,
           recentActivity: activityData.activities || []
@@ -163,20 +170,20 @@ export default function TradespersonDashboard() {
         }));
       }
     };
-    
+
     const fetchJobProgressData = async () => {
       try {
         // Fetch jobs where tradesperson is selected and status is in-progress or completed
         const jobsResponse = await fetch('/api/jobs/tradesperson');
         if (!jobsResponse.ok) throw new Error("Failed to load job progress data");
         const jobsData = await jobsResponse.json();
-        
+
         // Calculate totals and in-progress jobs
         const inProgressJobs = jobsData.jobs.filter(job => job.status === 'in-progress');
         const completedJobs = jobsData.jobs.filter(job => job.status === 'completed');
-        const totalEarnings = completedJobs.reduce((total, job) => 
+        const totalEarnings = completedJobs.reduce((total, job) =>
           total + (job.completionDetails?.finalAmount || 0), 0);
-        
+
         setDashboardData(prev => ({
           ...prev,
           jobProgress: {
@@ -210,32 +217,32 @@ export default function TradespersonDashboard() {
         }));
       }
     };
-    
+
     // Helper function to calculate job progress percentage
     const calculateJobProgress = (job) => {
       if (job.status === 'completed') return 100;
       if (job.status !== 'in-progress') return 0;
-      
+
       // If the job has a start and end date, calculate progress based on timeline
       if (job.timeline?.startDate && job.timeline?.endDate) {
         const startDate = new Date(job.timeline.startDate);
         const endDate = new Date(job.timeline.endDate);
         const currentDate = new Date();
-        
+
         // If job hasn't started yet
         if (currentDate < startDate) return 0;
-        
+
         // If job is past due date but not completed
         if (currentDate > endDate) return 90; // Cap at 90% if overdue
-        
+
         // Calculate percentage based on timeline
         const totalDuration = endDate - startDate;
         const elapsedDuration = currentDate - startDate;
         const progressPercentage = Math.round((elapsedDuration / totalDuration) * 100);
-        
+
         return Math.min(progressPercentage, 90); // Cap at 90% for in-progress jobs
       }
-      
+
       // Default value if no timeline data available
       return 50;
     };
@@ -247,9 +254,9 @@ export default function TradespersonDashboard() {
 
   // Update overall loading state when all individual loading states are false
   useEffect(() => {
-    if (!loadingStates.jobs && !loadingStates.applications && 
-        !loadingStates.profile && !loadingStates.activity && 
-        !loadingStates.jobProgress) {
+    if (!loadingStates.jobs && !loadingStates.applications &&
+      !loadingStates.profile && !loadingStates.activity &&
+      !loadingStates.jobProgress) {
       setDashboardData(prev => ({
         ...prev,
         loading: false
@@ -268,7 +275,7 @@ export default function TradespersonDashboard() {
   // Format date helper function
   const formatDate = (dateString) => {
     if (!dateString) return '';
-    
+
     const date = new Date(dateString);
     return new Intl.DateTimeFormat('en-US', {
       year: 'numeric',
@@ -278,7 +285,7 @@ export default function TradespersonDashboard() {
       minute: '2-digit'
     }).format(date);
   };
-  
+
   // Format number as currency
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('en-US', {
@@ -293,9 +300,9 @@ export default function TradespersonDashboard() {
   const otherApplications = Math.max(
     0,
     dashboardData.applications.total -
-      (dashboardData.applications.pending +
-        dashboardData.applications.shortlisted +
-        dashboardData.applications.accepted)
+    (dashboardData.applications.pending +
+      dashboardData.applications.shortlisted +
+      dashboardData.applications.accepted)
   );
 
   return (
@@ -306,7 +313,7 @@ export default function TradespersonDashboard() {
           <p className="mt-1 text-sm text-gray-500">
             Welcome back, {session?.user?.firstName || session?.user?.name || 'Tradesperson'}! Here's what's happening with your account.
           </p>
-          <hr className="border-1 mt-2 w-2/12 border-gray-400"/>
+          <hr className="border-1 mt-2 w-2/12 border-gray-400" />
         </div>
 
         {dashboardData.error && (
@@ -408,12 +415,12 @@ export default function TradespersonDashboard() {
                           </span>
                         </div>
                         <div className="overflow-hidden h-2 text-xs flex rounded bg-gray-200">
-                          <div 
-                            style={{ width: `${job.progress}%` }} 
+                          <div
+                            style={{ width: `${job.progress}%` }}
                             className={`shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center 
-                              ${job.progress < 30 ? 'bg-red-500' : 
-                                job.progress < 70 ? 'bg-yellow-500' : 
-                                'bg-green-500'}`}>
+                              ${job.progress < 30 ? 'bg-red-500' :
+                                job.progress < 70 ? 'bg-yellow-500' :
+                                  'bg-green-500'}`}>
                           </div>
                         </div>
                       </div>
@@ -650,15 +657,14 @@ export default function TradespersonDashboard() {
                         ) : null}
                         <div className="relative flex space-x-3">
                           <div>
-                            <span className={`h-8 w-8 rounded-full flex items-center justify-center ring-8 ring-white ${
-                              activity.type === 'application' ? 'bg-blue-500' :
-                              activity.type === 'job' ? 'bg-green-500' :
-                              activity.type === 'message' ? 'bg-yellow-500' :
-                              activity.type === 'credit' ? 'bg-purple-500' :
-                              activity.type === 'subscription' ? 'bg-indigo-500' :
-                              activity.type === 'payment' ? 'bg-emerald-500' :
-                              'bg-gray-500'
-                            }`}>
+                            <span className={`h-8 w-8 rounded-full flex items-center justify-center ring-8 ring-white ${activity.type === 'application' ? 'bg-blue-500' :
+                                activity.type === 'job' ? 'bg-green-500' :
+                                  activity.type === 'message' ? 'bg-yellow-500' :
+                                    activity.type === 'credit' ? 'bg-purple-500' :
+                                      activity.type === 'subscription' ? 'bg-indigo-500' :
+                                        activity.type === 'payment' ? 'bg-emerald-500' :
+                                          'bg-gray-500'
+                              }`}>
                               {activity.type === 'application' && (
                                 <svg className="h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
                                   <path fillRule="evenodd" d="M9 3a1 1 0 012 0v5.5a.5.5 0 001 0V4a1 1 0 112 0v4.5a.5.5 0 001 0V6a1 1 0 112 0v5a7 7 0 11-14 0V9a1 1 0 012 0v2.5a.5.5 0 001 0V4a1 1 0 012 0v4.5a.5.5 0 001 0V3z" clipRule="evenodd" />
@@ -703,33 +709,30 @@ export default function TradespersonDashboard() {
 
                               {/* Status badges for different activity types */}
                               {activity.status && activity.type === 'application' && (
-                                <span className={`mt-1 sm:mt-0 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                                  activity.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                                  activity.status === 'shortlisted' ? 'bg-blue-100 text-blue-800' :
-                                  activity.status === 'accepted' ? 'bg-green-100 text-green-800' :
-                                  activity.status === 'rejected' ? 'bg-red-100 text-red-800' :
-                                  'bg-gray-100 text-gray-800'
-                                }`}>
+                                <span className={`mt-1 sm:mt-0 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${activity.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                                    activity.status === 'shortlisted' ? 'bg-blue-100 text-blue-800' :
+                                      activity.status === 'accepted' ? 'bg-green-100 text-green-800' :
+                                        activity.status === 'rejected' ? 'bg-red-100 text-red-800' :
+                                          'bg-gray-100 text-gray-800'
+                                  }`}>
                                   {activity.status.charAt(0).toUpperCase() + activity.status.slice(1)}
                                 </span>
                               )}
 
                               {/* Amount display for credit and payment activities */}
                               {(activity.type === 'credit' || activity.type === 'payment') && activity.amount !== undefined && (
-                                <span className={`mt-1 sm:mt-0 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                                  activity.amount > 0 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                                }`}>
+                                <span className={`mt-1 sm:mt-0 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${activity.amount > 0 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                                  }`}>
                                   {activity.amount > 0 ? '+' : ''}{activity.amount} {activity.type === 'payment' ? '$' : 'credits'}
                                 </span>
                               )}
 
                               {/* Subscription status badges */}
                               {activity.type === 'subscription' && activity.status && (
-                                <span className={`mt-1 sm:mt-0 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                                  activity.status === 'active' ? 'bg-green-100 text-green-800' :
-                                  activity.status === 'canceled' ? 'bg-red-100 text-red-800' :
-                                  'bg-yellow-100 text-yellow-800'
-                                }`}>
+                                <span className={`mt-1 sm:mt-0 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${activity.status === 'active' ? 'bg-green-100 text-green-800' :
+                                    activity.status === 'canceled' ? 'bg-red-100 text-red-800' :
+                                      'bg-yellow-100 text-yellow-800'
+                                  }`}>
                                   {activity.status.charAt(0).toUpperCase() + activity.status.slice(1)}
                                 </span>
                               )}
@@ -740,9 +743,9 @@ export default function TradespersonDashboard() {
                               <div className="mt-2">
                                 <a href={activity.link} className="text-sm text-blue-600 hover:text-blue-500">
                                   {activity.type === 'application' ? 'View application' :
-                                   activity.type === 'job' ? 'View job details' :
-                                   activity.type === 'message' ? 'Read message' :
-                                   'View details'}
+                                    activity.type === 'job' ? 'View job details' :
+                                      activity.type === 'message' ? 'Read message' :
+                                        'View details'}
                                 </a>
                               </div>
                             )}

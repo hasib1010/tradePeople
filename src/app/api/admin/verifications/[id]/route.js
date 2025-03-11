@@ -6,6 +6,7 @@ import { connectToDatabase } from "@/lib/db";
 import { Tradesperson } from "@/models/User";
 import mongoose from "mongoose";
 import { VerificationLog } from "@/models/VerificationLog"; // You'll need to create this model
+import { sendEmail } from "@/lib/email";
 
 export async function GET(request, { params }) {
   try {
@@ -94,12 +95,30 @@ export async function PUT(request, { params }) {
         tradesperson.isActive = false;
       }
       
+      // Add verification metadata
+      tradesperson.verificationNote = note || "";
+      tradesperson.verificationDate = new Date();
+      
+      // Update certification verification status
+      if (approved && tradesperson.certifications && tradesperson.certifications.length > 0) {
+        tradesperson.certifications.forEach(cert => {
+          if (cert.documentUrl) {
+            cert.isVerified = true;
+          }
+        });
+      }
+      
+      // Update insurance verification if present
+      if (approved && tradesperson.insurance && tradesperson.insurance.documentUrl) {
+        tradesperson.insurance.isVerified = true;
+      }
+      
       await tradesperson.save({ session: dbSession });
       
       // Create verification log entry if the model exists
       try {
         const verificationLog = new VerificationLog({
-          tradespeople: id,
+          tradesperson: id,
           admin: session.user.id,
           action: approved ? 'approved' : 'rejected',
           note: note || '',
@@ -115,6 +134,39 @@ export async function PUT(request, { params }) {
       // Commit the transaction
       await dbSession.commitTransaction();
       dbSession.endSession();
+      
+      // Send email notification to tradesperson
+      try {
+        const emailSubject = approved 
+          ? "Your Tradesperson Account Has Been Verified"
+          : "Important Information About Your Tradesperson Account";
+        
+        const emailContent = approved
+          ? `
+            <h1>Your Account Has Been Verified!</h1>
+            <p>Hello ${tradesperson.firstName},</p>
+            <p>Congratulations! Your tradesperson account has been verified by our team. You can now apply for jobs on our platform.</p>
+            ${note ? `<p><strong>Note from our verification team:</strong> ${note}</p>` : ''}
+            <p>Log in to your account to start exploring available jobs and submitting applications.</p>
+            <p>Thank you for joining our platform!</p>
+          `
+          : `
+            <h1>Your Account Verification Update</h1>
+            <p>Hello ${tradesperson.firstName},</p>
+            <p>We regret to inform you that your account verification has not been approved at this time.</p>
+            ${note ? `<p><strong>Reason:</strong> ${note}</p>` : ''}
+            <p>If you believe this is a mistake or would like to provide additional information, please contact our support team.</p>
+          `;
+        
+        await sendEmail({
+          to: tradesperson.email,
+          subject: emailSubject,
+          html: emailContent
+        });
+      } catch (emailError) {
+        console.error("Error sending verification notification:", emailError);
+        // Continue even if email fails
+      }
       
       return NextResponse.json({
         success: true,
@@ -136,4 +188,3 @@ export async function PUT(request, { params }) {
     );
   }
 }
-  

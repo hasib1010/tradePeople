@@ -13,13 +13,13 @@ export default function CustomerDashboard() {
     },
   });
 
+  // State initialization
   const [stats, setStats] = useState({
     activeJobs: 0,
     completedJobs: 0,
     ongoingProjects: 0,
     savedTradespeople: 0,
   });
-
   const [recentJobs, setRecentJobs] = useState([]);
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -30,135 +30,352 @@ export default function CustomerDashboard() {
     comment: "",
     attributes: { punctuality: 0, professionalism: 0, workQuality: 0, communication: 0, valueForMoney: 0 },
   });
+  const [categories, setCategories] = useState([]);
 
+  // Load dashboard data when authenticated
   useEffect(() => {
     if (status === "authenticated" && session?.user) {
+      // Redirect if not a customer
       if (session.user.role !== "customer") {
         redirect("/dashboard");
         return;
       }
-      fetchDashboardData();
+
+      // Load all data
+      loadDashboardData();
     }
   }, [status, session]);
 
-  const fetchDashboardData = async () => {
+  const loadFavorites = async () => {
+    try {
+      const response = await fetch("/api/customer/favorites");
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        let errorMessage;
+
+        try {
+          const errorJson = JSON.parse(errorText);
+          errorMessage = errorJson.error || errorJson.message || `API error: ${response.status}`;
+        } catch (e) {
+          errorMessage = `API error: ${response.status}`;
+        }
+
+        console.warn("Error loading favorites:", errorMessage);
+        return []; // Return empty array on error, but continue
+      }
+
+      const data = await response.json();
+
+      if (!data.favorites || !Array.isArray(data.favorites)) {
+        console.warn("Invalid response format from favorites API");
+        return [];
+      }
+
+      console.log(`Loaded ${data.favorites.length} favorite tradespeople`);
+
+      // Update stats with the actual count of favorites
+      setStats(prevStats => ({
+        ...prevStats,
+        savedTradespeople: data.favorites.length
+      }));
+
+      return data.favorites;
+    } catch (error) {
+      console.error("Error loading favorites:", error);
+      return []; // Return empty array on error, but continue
+    }
+  };
+
+  // Updated loadDashboardData function to include favorites
+  const loadDashboardData = async () => {
     try {
       setLoading(true);
+      setError(null);
 
-      // Fetch jobs
-      const jobsResponse = await fetch("/api/jobs");
-      if (!jobsResponse.ok) throw new Error("Failed to fetch jobs");
-      const jobsData = await jobsResponse.json();
-      const userJobs = jobsData.jobs.filter((job) => job.customer && job.customer._id === session.user.id);
+      // First load categories
+      await loadCategories();
 
-      // Calculate stats
-      setStats({
-        activeJobs: userJobs.filter((job) => job.status === "open" || job.status === "draft").length,
-        completedJobs: userJobs.filter((job) => job.status === "completed").length,
-        ongoingProjects: userJobs.filter((job) => job.status === "in-progress").length,
-        savedTradespeople: 3, // Placeholder; fetch from /api/favorites if implemented
+      // Then load jobs
+      await loadJobs();
+
+      // Load favorite tradespeople
+      await loadFavorites();
+
+      setLoading(false);
+    } catch (error) {
+      console.error("Error loading dashboard data:", error);
+      setError(error.message || "Failed to load dashboard data");
+      setLoading(false);
+    }
+  };
+
+  // Load categories
+  const loadCategories = async () => {
+    try {
+      const response = await fetch("/api/categories");
+
+      if (!response.ok) {
+        console.warn("Categories API returned error status:", response.status);
+        return; // Don't throw error, continue without categories
+      }
+
+      const data = await response.json();
+
+      if (!Array.isArray(data)) {
+        console.warn("Categories API did not return an array:", data);
+        return;
+      }
+
+      // Make sure each category has a string id
+      const processedCategories = data.map(category => ({
+        ...category,
+        _id: category._id ? category._id.toString() : null
+      }));
+
+      setCategories(processedCategories);
+      console.log("Categories loaded:", processedCategories.length);
+    } catch (error) {
+      console.warn("Error loading categories:", error);
+      // Continue without categories
+    }
+  };
+
+  // Get category name helper function
+  const getCategoryName = (categoryId) => {
+    if (!categoryId) return "Unknown";
+
+    // If the categoryId is already a string name (not an ObjectId format)
+    if (typeof categoryId === 'string' && !categoryId.match(/^[0-9a-fA-F]{24}$/)) {
+      return categoryId;
+    }
+
+    // Convert to string to ensure consistent comparison
+    const categoryIdStr = categoryId.toString();
+
+    // Find matching category
+    const category = categories.find(c => {
+      const cId = c._id ? c._id.toString() : '';
+      return cId === categoryIdStr;
+    });
+
+    return category ? category.name : "Unknown";
+  };
+
+  // Load jobs
+  const loadJobs = async () => {
+    try {
+      const response = await fetch("/api/jobs");
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        let errorMessage;
+
+        try {
+          const errorJson = JSON.parse(errorText);
+          errorMessage = errorJson.error || errorJson.message || `API error: ${response.status}`;
+        } catch (e) {
+          errorMessage = `API error: ${response.status}`;
+        }
+
+        throw new Error(errorMessage);
+      }
+
+      const data = await response.json();
+
+      if (!data.jobs || !Array.isArray(data.jobs)) {
+        throw new Error("Invalid response format from jobs API");
+      }
+
+      // Filter to current user's jobs
+      const userJobs = data.jobs.filter(job =>
+        job.customer &&
+        ((job.customer._id && job.customer._id === session.user.id) ||
+          (job.customer.id && job.customer.id === session.user.id))
+      );
+
+      console.log(`Loaded ${userJobs.length} jobs for customer`);
+
+      setStats(prevStats => ({
+        activeJobs: userJobs.filter(job => job.status === "open" || job.status === "draft").length,
+        completedJobs: userJobs.filter(job => job.status === "completed").length,
+        ongoingProjects: userJobs.filter(job => job.status === "in-progress").length,
+        savedTradespeople: prevStats.savedTradespeople || 0, // Preserve existing value
+      }));
+
+      // Process recent jobs
+      const sortedJobs = [...userJobs]
+        .sort((a, b) => {
+          const dateA = a.timeline?.postedDate || a.createdAt || new Date();
+          const dateB = b.timeline?.postedDate || b.createdAt || new Date();
+          return new Date(dateB) - new Date(dateA);
+        })
+        .slice(0, 5);
+
+      const processedJobs = sortedJobs.map(job => {
+        // Determine category name from various possible sources
+        let categoryName = "Unknown";
+
+        if (job.categoryName) {
+          // If API already provided categoryName
+          categoryName = job.categoryName;
+        } else if (job.category) {
+          // If category is an object with name
+          if (typeof job.category === 'object' && job.category !== null) {
+            if (job.category.name) {
+              categoryName = job.category.name;
+            } else {
+              categoryName = getCategoryName(job.category._id || job.category);
+            }
+          }
+          // If category is an ID or string
+          else {
+            categoryName = getCategoryName(job.category);
+          }
+        }
+
+        return {
+          id: job._id,
+          title: job.title || "Untitled Job",
+          status: job.status || "draft",
+          applications: job.applicationCount || (job.applications && job.applications.length) || 0,
+          posted: job.timeline?.postedDate || job.createdAt || new Date(),
+          category: categoryName,
+          budget: job.budget,
+        };
       });
 
-      // Recent jobs
-      const sortedJobs = [...userJobs]
-        .sort((a, b) => new Date(b.timeline?.postedDate || b.createdAt) - new Date(a.timeline?.postedDate || a.createdAt))
-        .slice(0, 5);
-      const formattedJobs = sortedJobs.map((job) => ({
-        id: job._id,
-        title: job.title,
-        status: job.status,
-        applications: job.applicationCount || job.applications?.length || 0,
-        posted: job.timeline?.postedDate || job.createdAt,
-        category: job.category,
-      }));
-      setRecentJobs(formattedJobs);
+      setRecentJobs(processedJobs);
 
-      // Simulated notifications (replace with /api/notifications if available)
-      const newNotifications = [];
-      userJobs.forEach((job) => {
-        if (job.applicationCount > 0) {
+      // Generate notifications from jobs
+      generateNotifications(userJobs);
+
+    } catch (error) {
+      console.error("Error loading jobs:", error);
+      throw error;
+    }
+  };
+
+  // Generate notifications based on jobs
+  const generateNotifications = (jobs) => {
+    const newNotifications = [];
+
+    jobs.forEach(job => {
+      // Application notifications
+      if (job.applicationCount > 0 || (job.applications && job.applications.length > 0)) {
+        newNotifications.push({
+          id: `app-${job._id}`,
+          type: "application",
+          message: `A tradesperson applied to your job: "${job.title}"`,
+          date: new Date(),
+          jobId: job._id,
+          read: false,
+        });
+      }
+
+      // New job approval notification
+      if (job.status === "open" && job.createdAt) {
+        const jobCreatedTime = new Date(job.createdAt).getTime();
+        const now = Date.now();
+        const hoursSinceCreated = (now - jobCreatedTime) / (1000 * 60 * 60);
+
+        if (hoursSinceCreated < 24) {
           newNotifications.push({
-            id: `app-${job._id}`,
-            type: "application",
-            message: `A tradesperson applied to your job: "${job.title}"`,
-            date: new Date(), // Ideally from application timestamp
+            id: `approve-${job._id}`,
+            type: "approval",
+            message: `Your job "${job.title}" has been approved`,
+            date: new Date(job.createdAt),
             jobId: job._id,
             read: false,
           });
         }
-        if (job.status === "open" && job.createdAt) {
-          const timeDiff = Date.now() - new Date(job.createdAt).getTime();
-          if (timeDiff < 24 * 60 * 60 * 1000) {
-            newNotifications.push({
-              id: `approve-${job._id}`,
-              type: "approval",
-              message: `Your job "${job.title}" has been approved`,
-              date: new Date(job.createdAt),
-              jobId: job._id,
-              read: false,
-            });
-          }
-        }
-      });
-      setNotifications(newNotifications.slice(0, 5));
+      }
+    });
 
-      setLoading(false);
-    } catch (error) {
-      console.error("Error fetching dashboard data:", error);
-      setError(error.message);
-      setLoading(false);
-    }
+    // Sort by date (newest first) and take top 5
+    newNotifications.sort((a, b) => new Date(b.date) - new Date(a.date));
+    setNotifications(newNotifications.slice(0, 5));
   };
 
+  // Mark notification as read
   const markNotificationAsRead = (id) => {
-    setNotifications((prev) =>
-      prev.map((notif) => (notif.id === id ? { ...notif, read: true } : notif))
+    setNotifications(prev =>
+      prev.map(notif =>
+        notif.id === id ? { ...notif, read: true } : notif
+      )
     );
   };
 
+  // Complete job handler
   const handleCompleteJob = async (jobId) => {
     try {
+      setError(null);
+      const job = recentJobs.find(job => job.id === jobId);
+      if (!job) throw new Error("Job not found");
+
       const response = await fetch(`/api/jobs/${jobId}/complete`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           customerFeedback: "Great work completed on time.",
-          finalAmount: recentJobs.find((job) => job.id === jobId)?.budget?.minAmount || 0,
+          finalAmount: job.budget?.minAmount || 0,
         }),
       });
 
-      if (!response.ok) throw new Error("Failed to complete job");
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || errorData.error || "Failed to complete job");
+      }
 
       const data = await response.json();
-      setRecentJobs((prev) =>
-        prev.map((job) => (job.id === jobId ? { ...job, status: "completed" } : job))
+
+      // Update job status in UI
+      setRecentJobs(prev =>
+        prev.map(job =>
+          job.id === jobId ? { ...job, status: "completed" } : job
+        )
       );
-      setStats((prev) => ({
+
+      // Update stats
+      setStats(prev => ({
         ...prev,
         ongoingProjects: prev.ongoingProjects - 1,
         completedJobs: prev.completedJobs + 1,
       }));
-      setNotifications((prev) =>
-        prev
-          .concat({
-            id: `complete-${jobId}`,
-            type: "completion",
-            message: `Your job "${data.job.title}" has been marked as completed`,
-            date: new Date(),
-            jobId,
-            read: false,
-          })
-          .slice(0, 5)
-      );
-      setReviewModal({ open: true, jobId }); // Prompt review immediately
+
+      // Add completion notification
+      setNotifications(prev => [
+        {
+          id: `complete-${jobId}`,
+          type: "completion",
+          message: `Your job "${job.title}" has been marked as completed`,
+          date: new Date(),
+          jobId,
+          read: false,
+        },
+        ...prev,
+      ].slice(0, 5));
+
+      // Open review modal
+      setReviewModal({ open: true, jobId });
+
     } catch (error) {
-      setError(error.message);
+      console.error("Error completing job:", error);
+      setError(error.message || "Failed to complete job");
     }
   };
 
+  // Handle review submission
   const handleReviewSubmit = async (e) => {
     e.preventDefault();
+
     try {
+      setError(null);
+
+      if (reviewForm.rating === 0) {
+        throw new Error("Please provide a rating");
+      }
+
       const response = await fetch("/api/reviews", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -170,35 +387,45 @@ export default function CustomerDashboard() {
         }),
       });
 
-      if (!response.ok) throw new Error("Failed to submit review");
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || errorData.error || "Failed to submit review");
+      }
 
+      // Close modal and reset form
       setReviewModal({ open: false, jobId: null });
       setReviewForm({
         rating: 0,
         comment: "",
         attributes: { punctuality: 0, professionalism: 0, workQuality: 0, communication: 0, valueForMoney: 0 },
       });
-      setNotifications((prev) =>
-        prev
-          .concat({
-            id: `review-${reviewModal.jobId}`,
-            type: "review",
-            message: `You submitted a review for "${recentJobs.find((j) => j.id === reviewModal.jobId)?.title}"`,
-            date: new Date(),
-            jobId: reviewModal.jobId,
-            read: false,
-          })
-          .slice(0, 5)
-      );
+
+      // Add review notification
+      const job = recentJobs.find(job => job.id === reviewModal.jobId);
+      setNotifications(prev => [
+        {
+          id: `review-${reviewModal.jobId}`,
+          type: "review",
+          message: `You submitted a review for "${job?.title || 'your job'}"`,
+          date: new Date(),
+          jobId: reviewModal.jobId,
+          read: false,
+        },
+        ...prev,
+      ].slice(0, 5));
+
     } catch (error) {
-      setError(error.message);
+      console.error("Error submitting review:", error);
+      setError(error.message || "Failed to submit review");
     }
   };
 
+  // Star rating handler
   const handleStarClick = (value) => {
-    setReviewForm((prev) => ({ ...prev, rating: value }));
+    setReviewForm(prev => ({ ...prev, rating: value }));
   };
 
+  // Loading state
   if (status === "loading" || loading) {
     return (
       <div className="min-h-screen flex justify-center items-center bg-gray-50">
@@ -207,6 +434,7 @@ export default function CustomerDashboard() {
     );
   }
 
+  // Error state
   if (error) {
     return (
       <div className="min-h-screen flex justify-center items-center bg-gray-50">
@@ -216,32 +444,50 @@ export default function CustomerDashboard() {
           </svg>
           <h2 className="mt-4 text-2xl font-bold text-gray-800">Error Loading Dashboard</h2>
           <p className="mt-2 text-gray-600">{error}</p>
-          <button
-            onClick={() => fetchDashboardData()}
-            className="mt-6 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-          >
-            Retry
-          </button>
+          <details className="mt-2 text-left">
+            <summary className="cursor-pointer text-sm text-gray-500">Debug Information</summary>
+            <div className="mt-2 p-2 bg-gray-100 rounded text-xs font-mono whitespace-pre-wrap">
+              <p>Check the browser console for more details.</p>
+              <p>API endpoints to check:</p>
+              <ul className="list-disc pl-5">
+                <li>/api/jobs - Main jobs endpoint</li>
+                <li>/api/categories - Categories endpoint</li>
+              </ul>
+            </div>
+          </details>
+          <div className="mt-6">
+            <button
+              onClick={() => loadDashboardData()}
+              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+            >
+              Retry
+            </button>
+          </div>
         </div>
       </div>
     );
   }
 
+  // Main dashboard UI
   return (
     <div className="min-h-screen bg-gray-50 py-6">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Welcome back, {session.user.firstName || session.user.name}</h1>
+          <h1 className="text-3xl font-bold text-gray-900">
+            Welcome back, {session.user.firstName || session.user.name || "User"}
+          </h1>
           <p className="mt-2 text-sm text-gray-600">
             Manage your projects and connect with skilled tradespeople.
           </p>
-          <hr className="border-1 mt-2 w-2/12 border-gray-400"/>
+          <hr className="border-1 mt-2 w-2/12 border-gray-400" />
         </div>
 
         <div className="grid grid-cols-1 gap-5 lg:grid-cols-4">
+          {/* Main content area */}
           <div className="lg:col-span-3">
+            {/* Stats cards */}
             <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4 mb-8">
-              {/* Dynamic Stats */}
               <StatCard
                 title="Active Job Postings"
                 value={stats.activeJobs}
@@ -281,79 +527,6 @@ export default function CustomerDashboard() {
               <div className="px-4 py-5 sm:px-6 border-b border-gray-200">
                 <h3 className="text-lg leading-6 font-medium text-gray-900">Recent Job Postings</h3>
               </div>
-              // Inside the "Recent Job Postings" render block
-              <div className="bg-white overflow-hidden shadow rounded-lg">
-                <div className="px-4 py-5 sm:px-6 border-b border-gray-200">
-                  <h3 className="text-lg leading-6 font-medium text-gray-900">Recent Job Postings</h3>
-                </div>
-                <div className="bg-gray-50 px-4 py-5 sm:p-6">
-                  {recentJobs.length > 0 ? (
-                    <div className="flow-root">
-                      <ul className="-my-5 divide-y divide-gray-200">
-                        {recentJobs.map((job) => (
-                          <li key={job.id} className="py-5">
-                            <div className="flex items-center space-x-4">
-                              <div className="flex-shrink-0">
-                                {/* Status icon */}
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <p className="text-sm font-medium text-gray-900 truncate">{job.title}</p>
-                                <div className="mt-1 flex items-center">
-                                  <span
-                                    className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${job.status === "open"
-                                      ? "bg-blue-100 text-blue-800"
-                                      : job.status === "in-progress"
-                                        ? "bg-yellow-100 text-yellow-800"
-                                        : job.status === "completed"
-                                          ? "bg-green-100 text-green-800"
-                                          : job.status === "draft"
-                                            ? "bg-purple-100 text-purple-800"
-                                            : "bg-gray-100 text-gray-800"
-                                      }`}
-                                  >
-                                    {job.status.charAt(0).toUpperCase() + job.status.slice(1)}
-                                  </span>
-                                  <span className="ml-2 text-sm text-gray-500">{job.applications} applications</span>
-                                  <span className="mx-1 text-gray-500">•</span>
-                                  <span className="text-sm text-gray-500">{job.category}</span>
-                                </div>
-                                <p className="mt-1 text-sm text-gray-500">
-                                  Posted on {new Date(job.posted).toLocaleDateString()}
-                                </p>
-                              </div>
-                              <div className="flex space-x-2">
-                                <Link
-                                  href={`/jobs/${job.id}`}
-                                  className="inline-flex items-center shadow-sm px-3 py-1 border border-gray-300 text-sm leading-5 font-medium rounded-full text-gray-700 bg-white hover:bg-gray-50"
-                                >
-                                  View
-                                </Link>
-                                {job.status === "in-progress" && (
-                                  <button
-                                    onClick={() => handleCompleteJob(job.id)}
-                                    className="inline-flex items-center shadow-sm px-3 py-1 border border-green-300 text-sm leading-5 font-medium rounded-full text-green-700 bg-green-50 hover:bg-green-100"
-                                  >
-                                    Complete
-                                  </button>
-                                )}
-                                {job.status === "completed" && (
-                                  <button
-                                    onClick={() => setReviewModal({ open: true, jobId: job.id })}
-                                    className="inline-flex items-center shadow-sm px-3 py-1 border border-indigo-300 text-sm leading-5 font-medium rounded-full text-indigo-700 bg-indigo-50 hover:bg-indigo-100"
-                                  >
-                                    Review
-                                  </button>
-                                )}
-                              </div>
-                            </div>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  ) : (<></>
-                  )}
-                </div>
-              </div>
               <div className="bg-gray-50 px-4 py-5 sm:p-6">
                 {recentJobs.length > 0 ? (
                   <div className="flow-root">
@@ -363,27 +536,19 @@ export default function CustomerDashboard() {
                           <div className="flex items-center space-x-4">
                             <div className="flex-shrink-0">
                               <span
-                                className={`inline-flex items-center justify-center h-12 w-12 rounded-md ${job.status === "open"
-                                  ? "bg-blue-100"
-                                  : job.status === "in-progress"
-                                    ? "bg-yellow-100"
-                                    : job.status === "completed"
-                                      ? "bg-green-100"
-                                      : job.status === "draft"
-                                        ? "bg-purple-100"
-                                        : "bg-gray-100"
+                                className={`inline-flex items-center justify-center h-12 w-12 rounded-md ${job.status === "open" ? "bg-blue-100" :
+                                  job.status === "in-progress" ? "bg-yellow-100" :
+                                    job.status === "completed" ? "bg-green-100" :
+                                      job.status === "draft" ? "bg-purple-100" :
+                                        "bg-gray-100"
                                   }`}
                               >
                                 <svg
-                                  className={`h-6 w-6 ${job.status === "open"
-                                    ? "text-blue-600"
-                                    : job.status === "in-progress"
-                                      ? "text-yellow-600"
-                                      : job.status === "completed"
-                                        ? "text-green-600"
-                                        : job.status === "draft"
-                                          ? "text-purple-600"
-                                          : "text-gray-600"
+                                  className={`h-6 w-6 ${job.status === "open" ? "text-blue-600" :
+                                    job.status === "in-progress" ? "text-yellow-600" :
+                                      job.status === "completed" ? "text-green-600" :
+                                        job.status === "draft" ? "text-purple-600" :
+                                          "text-gray-600"
                                     }`}
                                   xmlns="http://www.w3.org/2000/svg"
                                   fill="none"
@@ -401,22 +566,20 @@ export default function CustomerDashboard() {
                             </div>
                             <div className="flex-1 min-w-0">
                               <p className="text-sm font-medium text-gray-900 truncate">{job.title}</p>
-                              <div className="mt-1 flex items-center">
+                              <div className="mt-1 flex items-center flex-wrap">
                                 <span
-                                  className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${job.status === "open"
-                                    ? "bg-blue-100 text-blue-800"
-                                    : job.status === "in-progress"
-                                      ? "bg-yellow-100 text-yellow-800"
-                                      : job.status === "completed"
-                                        ? "bg-green-100 text-green-800"
-                                        : job.status === "draft"
-                                          ? "bg-purple-100 text-purple-800"
-                                          : "bg-gray-100 text-gray-800"
+                                  className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${job.status === "open" ? "bg-blue-100 text-blue-800" :
+                                    job.status === "in-progress" ? "bg-yellow-100 text-yellow-800" :
+                                      job.status === "completed" ? "bg-green-100 text-green-800" :
+                                        job.status === "draft" ? "bg-purple-100 text-purple-800" :
+                                          "bg-gray-100 text-gray-800"
                                     }`}
                                 >
-                                  {job.status.charAt(0).toUpperCase() + job.status.slice(1)}
+                                  {job.status.charAt(0).toUpperCase() + job.status.slice(1).replace(/-/g, ' ')}
                                 </span>
-                                <span className="ml-2 text-sm text-gray-500">{job.applications} applications</span>
+                                <span className="ml-2 text-sm text-gray-500">
+                                  {job.applications} {job.applications === 1 ? 'application' : 'applications'}
+                                </span>
                                 <span className="mx-1 text-gray-500">•</span>
                                 <span className="text-sm text-gray-500">{job.category}</span>
                               </div>
@@ -482,6 +645,7 @@ export default function CustomerDashboard() {
             </div>
           </div>
 
+          {/* Sidebar */}
           <div className="lg:col-span-1 space-y-5">
             {/* Notifications */}
             <div className="bg-white shadow rounded-lg">
@@ -495,8 +659,7 @@ export default function CustomerDashboard() {
                     {notifications.map((notification) => (
                       <li
                         key={notification.id}
-                        className={`p-4 rounded-md ${notification.read ? "bg-gray-50" : "bg-blue-50 border-l-4 border-blue-500"
-                          }`}
+                        className={`p-4 rounded-md ${notification.read ? "bg-gray-50" : "bg-blue-50 border-l-4 border-blue-500"}`}
                       >
                         <div className="flex items-start">
                           <div className="flex-1">
@@ -568,7 +731,10 @@ export default function CustomerDashboard() {
             <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-xl font-semibold text-gray-900">Review Tradesperson</h3>
-                <button onClick={() => setReviewModal({ open: false, jobId: null })} className="text-gray-400 hover:text-gray-600">
+                <button
+                  onClick={() => setReviewModal({ open: false, jobId: null })}
+                  className="text-gray-400 hover:text-gray-600"
+                >
                   <X className="h-6 w-6" />
                 </button>
               </div>
@@ -599,7 +765,37 @@ export default function CustomerDashboard() {
                     required
                   />
                 </div>
-                {/* Optional: Add attribute ratings */}
+
+                {/* Attribute Ratings */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Rate specific attributes</label>
+                  <div className="space-y-3">
+                    {Object.keys(reviewForm.attributes).map((attr) => (
+                      <div key={attr} className="flex items-center">
+                        <span className="w-1/3 text-sm text-gray-600 capitalize">
+                          {attr.replace(/([A-Z])/g, ' $1').trim()}
+                        </span>
+                        <div className="flex flex-1">
+                          {[1, 2, 3, 4, 5].map((star) => (
+                            <Star
+                              key={`${attr}-${star}`}
+                              className={`h-5 w-5 cursor-pointer ${star <= reviewForm.attributes[attr] ? "text-yellow-400 fill-current" : "text-gray-300"
+                                }`}
+                              onClick={() => setReviewForm((prev) => ({
+                                ...prev,
+                                attributes: {
+                                  ...prev.attributes,
+                                  [attr]: star
+                                }
+                              }))}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
                 <div className="flex justify-end space-x-2">
                   <button
                     type="button"
@@ -642,7 +838,7 @@ function StatCard({ title, value, icon, color, link, linkText }) {
       </div>
       <div className="bg-gray-50 px-4 py-4 sm:px-6">
         <Link href={link} className={`text-sm font-medium text-${color}-600 hover:text-${color}-500`}>
-          {linkText}
+          {linkText} <span aria-hidden="true">&rarr;</span>
         </Link>
       </div>
     </div>

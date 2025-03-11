@@ -3,6 +3,7 @@ import NextAuth from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { connectToDatabase } from "@/lib/db";
 import { User } from "@/models/User";
+import TempUser from "@/models/TempUser";
 import bcrypt from "bcryptjs";
 
 export const authOptions = {  // Export authOptions
@@ -20,9 +21,18 @@ export const authOptions = {  // Export authOptions
 
         await connectToDatabase();
 
+        // Check if user exists in verified users
         const user = await User.findOne({ email: credentials.email });
         
+        // If no verified user exists, check if a temporary user exists
         if (!user) {
+          const tempUser = await TempUser.findOne({ email: credentials.email });
+          
+          // If temp user exists, it means email verification is pending
+          if (tempUser) {
+            throw new Error("Please verify your email before logging in. Check your inbox for the verification link.");
+          }
+          
           throw new Error("No user found with this email");
         }
 
@@ -35,10 +45,15 @@ export const authOptions = {  // Export authOptions
           throw new Error("Invalid password");
         }
 
+        // Update last login timestamp
+        user.lastLogin = new Date();
+        await user.save();
+
         return {
           id: user._id.toString(),
           email: user.email,
           name: `${user.firstName} ${user.lastName}`,
+          firstName: user.firstName,
           role: user.role,
           image: user.profileImage || null
         };
@@ -51,6 +66,7 @@ export const authOptions = {  // Export authOptions
         token.id = user.id;
         token.email = user.email;
         token.name = user.name;
+        token.firstName = user.firstName;
         token.role = user.role;
         token.picture = user.image;
       }
@@ -63,6 +79,7 @@ export const authOptions = {  // Export authOptions
           id: token.id,
           email: token.email,
           name: token.name,
+          firstName: token.firstName,
           role: token.role,
           image: token.picture
         };
