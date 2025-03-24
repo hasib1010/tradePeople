@@ -7,16 +7,16 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 
 export async function GET(request, { params }) {
   try {
-    const id = params.id;
-    
+    // No need to await params; it's already resolved by Next.js
+    const { id } = params; // Destructure id from params directly
+
     await connectToDatabase();
 
     // Find the job by ID with customer and selected tradesperson
-    // Using .lean() to get a plain JavaScript object instead of a Mongoose document
     const job = await Job.findById(id)
       .populate("customer", "firstName lastName name email profileImage phoneNumber")
       .populate("selectedTradesperson", "firstName lastName name profileImage")
-      .lean(); // Convert to plain object
+      .lean();
 
     if (!job) {
       return NextResponse.json(
@@ -29,7 +29,7 @@ export async function GET(request, { params }) {
     const applications = await Application.find({ job: id })
       .populate("tradesperson", "firstName lastName name email profileImage")
       .sort({ submittedAt: -1 })
-      .lean(); // Convert to plain objects
+      .lean();
 
     // Ensure attachments array exists and is properly formatted
     if (!job.attachments) {
@@ -42,7 +42,6 @@ export async function GET(request, { params }) {
     // Make sure applicationCount matches the actual number of applications
     job.applicationCount = applications.length;
 
-    // Debug log to verify attachments are included
     console.log(`Job ${id} has ${job.attachments?.length || 0} attachments:`, 
                 job.attachments?.map(att => att.name || 'unnamed attachment') || []);
 

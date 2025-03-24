@@ -1,55 +1,36 @@
 // src/lib/email.js
-import nodemailer from 'nodemailer';
+import nodemailer from "nodemailer";
 
-// Configure Gmail transporter
 const transporter = nodemailer.createTransport({
-  service: 'gmail',  // Using Gmail service
+  service: "gmail",
   auth: {
-    user: process.env.EMAIL_USERNAME, // mdhasibulhasan360@gmail.com
-    pass: process.env.EMAIL_PASSWORD, // App password: tpna ktvz scfz zvkj
+    user: process.env.EMAIL_USERNAME, // Your Gmail address
+    pass: process.env.EMAIL_PASSWORD, // Use an App Password instead of your normal password
   },
 });
 
 /**
  * Send an email
- * @param {Object} options Email options
- * @param {string} options.to Recipient email
- * @param {string} options.subject Email subject
- * @param {string} options.text Plain text content (optional if html is provided)
- * @param {string} options.html HTML content (optional if text is provided)
- * @param {string} options.from Sender email (optional, falls back to default)
- * @returns {Promise<Object>} Message info
  */
-export const sendEmail = async ({ to, subject, text, html, from = process.env.EMAIL_USERNAME }) => {
+export const sendEmail = async ({ to, subject, text, html }) => {
   try {
-    if (!to || !subject || (!text && !html)) {
-      throw new Error('Missing required email parameters');
-    }
-
     const mailOptions = {
-      from,
+      from: `"MyTradesperson" <info@mytradesperson.co.uk>`, // Custom sender name
       to,
       subject,
       text,
       html,
     };
 
-    // Remove undefined values
-    Object.keys(mailOptions).forEach(key => {
-      if (mailOptions[key] === undefined) {
-        delete mailOptions[key];
-      }
-    });
-
-    console.log('Sending email to:', to, 'with subject:', subject);
     const info = await transporter.sendMail(mailOptions);
-    console.log('Email sent successfully:', info.messageId);
+    console.log("Email sent: ", info.messageId);
     return info;
   } catch (error) {
-    console.error('Error sending email:', error);
+    console.error("Error sending email:", error);
     throw error;
   }
 };
+
 
 // Utility function to create standard email templates
 export const createEmailTemplate = (options) => {
